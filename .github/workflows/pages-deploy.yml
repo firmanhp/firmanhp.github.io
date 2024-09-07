@@ -55,6 +55,12 @@ jobs:
             \-\-disable-external \
             \-\-ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"
 
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site_blog
+          path: "./blog/_site"
+
   deploy:
     environment:
       name: github-pages
@@ -66,10 +72,16 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
 
-      - name: Upload site artifact
+      - name: Download blog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site_blog
+          path: "./BUILD/_site"
+
+      - name: Upload github-pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./blog/_site"
+          path: "./BUILD/_site"
 
       - name: Deploy to GitHub Pages
         id: deployment
