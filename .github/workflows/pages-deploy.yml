@@ -44,6 +44,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
+          working-directory: ./blog
           ruby-version: 3.3
           bundler-cache: true
 
