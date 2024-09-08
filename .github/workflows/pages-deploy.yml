@@ -98,7 +98,7 @@ jobs:
       - name: Download landing page artifact
         uses: actions/download-artifact@v4
         with:
-          name: site_blog
+          name: site_landing
           path: "./BUILD/_site"
 
       - name: Upload github-pages artifact
