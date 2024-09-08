@@ -22,6 +22,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  landing_build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site_landing
+          path: "./landing"
+
   blog_build:
     runs-on: ubuntu-latest
     defaults:
@@ -73,6 +82,12 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Download blog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site_blog
+          path: "./BUILD/_site"
+
+      - name: Download landing page artifact
         uses: actions/download-artifact@v4
         with:
           name: site_blog
