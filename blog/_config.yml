@@ -16,10 +16,11 @@ timezone: Asia/Taipei
 
 title: Cuap # the main title
 
-tagline: Postingan nirfaedah. # it will display as the subtitle
+tagline: >-  # it will display as the subtitle
+  Postingan nirfaedah.
 
 description: >- # used by seo meta and the atom feed
-  A minimal, responsive and feature-rich Jekyll theme for technical writing.
+  Random posts in Indonesian/English.
 
 # Fill in the protocol & hostname for your site.
 # E.g. 'https://username.github.io', note that it does not end with a '/'.
@@ -98,7 +99,7 @@ theme_mode: dark # [light | dark]
 cdn:
 
 # the avatar on sidebar, support local or CORS resources
-avatar: assets/img/avatar.jpeg
+avatar: assets/global/img/avatar.jpeg
 
 # The URL of the site-wide social preview image used in SEO `og:image` meta tag.
 # It can be overridden by a customized `page.image` in front matter.
