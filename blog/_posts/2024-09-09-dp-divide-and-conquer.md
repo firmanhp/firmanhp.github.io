@@ -125,5 +125,5 @@ int main() {
 }
 ```
 
-#### Kattis famouspagoda
+### Kattis famouspagoda
 Untuk soal, [klik disini](https://open.kattis.com/problems/famouspagoda)
