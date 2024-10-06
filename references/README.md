@@ -1,0 +1,1 @@
+This directory contains code references for my blog.
