@@ -1,6 +1,6 @@
 ---
 title: "Pemrograman Bare Metal dalam Raspberry Pi dengan Rust"
-date: 2024-09-12 00:00:00 +0900
+date: 2024-10-05 17:00:00 +0800
 categories: [OS]
 tags: [qemu, raspberry-pi, bare-metal, systems-programming, indonesia]
 description: "(Post in Indonesian) Belajar bare metal programming + Rust"
