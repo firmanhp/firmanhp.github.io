@@ -3,12 +3,12 @@ title: "Pemrograman Bare Metal dalam Raspberry Pi dengan Rust"
 date: 2024-09-12 00:00:00 +0900
 categories: [OS]
 tags: [qemu, raspberry-pi, bare-metal, systems-programming, indonesia]
-description: "(Post in Indonesian) Belajar bare metal programming + Rust biar gaul"
+description: "(Post in Indonesian) Belajar bare metal programming + Rust"
 media_subpath: /assets/2024-10-05-id-raspi-bare-metal-rust
 image:
   path: img/thumbnail.jpeg
   alt: Saat debugging program di Raspberry Pi 3.
-render_with_liquid: false
+render_with_liquid: true
 ---
 
 Dari kemarin sebenernya bingung mau nulis ini dalam Bahasa Inggris atau enggak,
@@ -48,8 +48,8 @@ ditambah dengan peripheral (hardware tambahan) dari BCM2837.
 
 Kita bisa dapatkan datasheet dari BCM2837
 [disini](https://github.com/raspberrypi/documentation/issues/325#issuecomment-379651504).
-Atau di link yang sudah saya mirrorkan [disini]({{ site.baseurl }}{{
-page.media_subpath }}/pdf/BCM2837-ARM-Peripherals-Revised-V2-1)
+Atau di link yang sudah saya mirrorkan
+[disini]({{ site.baseurl }}{{ page.media_subpath }}/pdf/BCM2837-ARM-Peripherals-Revised-V2-1.pdf)
 
 Dalam PDF tersebut sudah disediakan cara berinteraksi untuk setiap komponen, dan
 alamat dari register tersebut.
