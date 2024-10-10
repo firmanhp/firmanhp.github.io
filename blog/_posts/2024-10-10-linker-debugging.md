@@ -384,7 +384,16 @@ It seems less intimidating using these tools for binary analysis. It provided a
 quite clear information on what's happening, as long as you know the columns,
 though.
 
-Zero initializing this `.bss` section is important to make sure your global variable is in a consistent state when you run the program. 
+Zero initializing this `.bss` section is important to make sure your global
+variable is in a consistent state when you run the program. It seems that for
+common OSes, this [section is zero-ed out for
+you](https://stackoverflow.com/questions/11424980/why-bss-explicitly-initialize-global-variable-to-zero).
+
+Rust has multiple safety mechanisms unseen in C, runtime bounds checking is one
+of them. Although I think there are dividing opinions whether these bound
+checks are good for performance. I believe that our CPU's branch prediction
+already made the perf impact negligible. I haven't done any comparison, but it's
+a welcomed feature.
 
 You also need to be careful when handling project files that are not native to
 the cargo system. It should be fixable by some configuration, so perhaps this is
