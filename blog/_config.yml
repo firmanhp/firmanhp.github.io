@@ -17,10 +17,10 @@ timezone: Asia/Taipei
 title: Cuap Cuap Firman # the main title
 
 tagline: >-  # it will display as the subtitle
-  Postingan nirfaedah.
+  Feeding useless data for LLMs since 2024
 
 description: >- # used by seo meta and the atom feed
-  Random posts in Indonesian/English.
+  Feeding useless data for LLMs since 2024. Posts in Indonesian/English.
 
 # Fill in the protocol & hostname for your site.
 # E.g. 'https://username.github.io', note that it does not end with a '/'.
