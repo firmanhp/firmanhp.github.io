@@ -137,10 +137,10 @@ GPIO yang akan digunakan sebagai transmitter/receiver.
 
 ### Konfigurasi GPIO
 
-Dari [pinout.xyz](pinout.xyz), bisa dilihat Raspberry Pi menghubungkan GPIO 14
-dan 15 ke UART TX/RX apabila GPIO tersebut dikonfigurasi ke FUNC0/ALT0 (bisa
-dicek [disini](https://elinux.org/RPi_BCM2835_GPIOs)). Dari tutorial sebelumnya
-kita sudah memiliki fungsi untuk mengatur function GPIO.
+Dari [pinout.xyz](https://pinout.xyz), bisa dilihat Raspberry Pi menghubungkan
+GPIO 14 dan 15 ke UART TX/RX apabila GPIO tersebut dikonfigurasi ke FUNC0/ALT0
+(bisa dicek [disini](https://elinux.org/RPi_BCM2835_GPIOs)). Dari tutorial
+sebelumnya kita sudah memiliki fungsi untuk mengatur function GPIO.
 
 ```rust
 // Func0 is TXD0/RXD0
