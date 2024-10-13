@@ -1,4 +1,5 @@
 use crate::io::mmio;
+use crate::synchronization;
 
 // Number of GPIOs
 const NUM_GPIOS: u8 = 54;
@@ -23,6 +24,10 @@ impl Reg {
   const GPSET1: u64    = Reg::BASE + 0x20; // GPIO Pin Output Set 1
   const GPCLR0: u64    = Reg::BASE + 0x28; // GPIO Pin Output Clear 0
   const GPCLR1: u64    = Reg::BASE + 0x2C; // GPIO Pin Output Clear 1
+
+  const GPPUD: u64 = Reg::BASE + 0x94; // GPIO Pin Pull-up/down Enable
+  const GPPUDCLK0: u64 = Reg::BASE + 0x98; // GPIO Pin Pull-up/down Enable Clock 0
+  const GPPUDCLK1: u64 = Reg::BASE + 0x9C; // GPIO Pin Pull-up/down Enable Clock 1
 }
 
 #[allow(dead_code)]
@@ -36,6 +41,48 @@ pub enum Function {
   Func4,
   Func5,
 }
+
+// Pull up/down control mode.
+#[allow(dead_code)]
+pub enum PullMode {
+  // Off – disable pull-up/down
+  Disabled,
+  // Enable Pull Down control
+  PullDown,
+  // Enable Pull Up control
+  PullUp,
+}
+
+// Set pull mode for GPIOs 0..(MAX_GPIOs - 1) based on bit.
+pub fn set_pull_mode(mut gpios: u64, mode: PullMode) {
+  // Make sure only 0..53 are set
+  gpios = gpios & ((1 << NUM_GPIOS) - 1);
+  let gpios_0: u32 = gpios as u32;
+  let gpios_1: u32 = (gpios >> 32) as u32;
+
+  // Write to GPPUD to set the required control signal
+  match mode {
+    PullMode::Disabled => mmio::write(Reg::GPPUD, 0x00),
+    PullMode::PullDown => mmio::write(Reg::GPPUD, 0x01),
+    PullMode::PullUp => mmio::write(Reg::GPPUD, 0x10),
+  }
+  // Wait 150 cycles – this provides the required set-up time for the control signal
+  synchronization::sleep(150);
+  // Write to GPPUDCLK0/1 to clock the control signal into the GPIO pads
+  // you wish to modify – NOTE only the pads which receive a clock will be
+  // modified, all others will retain their previous state
+  mmio::write(Reg::GPPUDCLK0, gpios_0);
+  mmio::write(Reg::GPPUDCLK1, gpios_1);
+  // Wait 150 cycles – this provides the required hold time for the control signal
+  synchronization::sleep(150);
+
+  // Write to GPPUD to remove the control signal
+  mmio::write(Reg::GPPUD, 0x00);
+  // Write to GPPUDCLK0/1 to remove the clock
+  mmio::write(Reg::GPPUDCLK0, 0x00);
+  mmio::write(Reg::GPPUDCLK1, 0x00);
+}
+
 
 // Set function of GPIOs in which position the bit is set.
 // For example, set_function(1 << 5 | 1 << 10, Function::Output)
