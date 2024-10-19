@@ -18,10 +18,13 @@ make -C my_library_v1 all
 make -C my_library_v2 all
 ```
 
-### Main
-Cukup jalankan `make all` untuk build executable `main`.
+### Program
+Cukup jalankan `make all` untuk build executable `main` dan `sizecomp`.
+
 
 ## Eksekusi
+
+### main
 
 Eksekusi program `main` mengharuskan kita untuk spesifikasi lokasi `shared
 library` yang bisa digunakan. Shortcut sudah disediakan melalui Makefile untuk 
@@ -30,11 +33,28 @@ eksekusi program menggunakan library versi 1 maupun 2.
 Untuk menjalankan program menggunakan library versi 1:
 
 ```
-make run_v1
+make main_run_v1
 ```
 
 Untuk menjalankan program menggunakan library versi 2:
 
 ```
-make run_v2
+make main_run_v2
+```
+
+### sizecomp
+
+Untuk eksekusi program `sizecomp`, sudah disediakan juga shortcut sama seperti `main`:
+
+
+Untuk menjalankan program menggunakan library versi 1:
+
+```
+make sizecomp_run_v1
+```
+
+Untuk menjalankan program menggunakan library versi 2:
+
+```
+make sizecomp_run_v2
 ```

@@ -8,3 +8,4 @@ struct MyObject {
 };
 
 extern int GetVersion(MyObject& the_object);
+extern int GetObjectSize();

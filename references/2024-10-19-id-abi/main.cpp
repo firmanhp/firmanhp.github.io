@@ -8,7 +8,6 @@ int main(int argc, char* argv[]) {
     .ver_major = 0xAB, // 0xDE = 171
   };
   int version = GetVersion(the_object);
-
   std::cout << "Version: " << version << '\n';
   return 0;
 }
