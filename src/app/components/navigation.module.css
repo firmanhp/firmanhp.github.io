@@ -1,0 +1,29 @@
+.nav {
+  border-bottom: 1px solid #45475a;
+  background-color: rgba(17, 17, 27, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+.navLink {
+  color: #a6adc8;
+  transition: all 0.2s ease;
+  border-radius: 0.375rem;
+  position: relative;
+}
+
+.navLink:hover {
+  color: #89b4fa;
+  background-color: rgba(137, 180, 250, 0.1);
+}
+
+.navLink:active {
+  transform: scale(0.98);
+}
+
+.title {
+  color: #f2cdcd;
+  background: linear-gradient(135deg, #f2cdcd 0%, #f5c2e7 50%, #cba6f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
