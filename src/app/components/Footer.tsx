@@ -9,26 +9,32 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Brand/Info */}
           <div className="col-span-2">
-            <p className="text-sm" style={{color: '#a6adc8'}}>
+            <p className="text-sm text-caption">
               Congratulations, you have reached the bottom!
             </p>
           </div>
 
-
           {/* Social/Contact */}
           <div>
-            <h3 className="text-lg font-semibold mb-4" style={{color: '#cdd6f4'}}>
+            <h3 className="text-lg font-semibold mb-4 text-title">
               Connect
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2 mb-2">
               <Link 
                 href="https://github.com/firmanhp" 
-                className="block text-sm hover:text-blue-400 transition-colors"
-                style={{color: '#a6adc8'}}
+                className="block text-sm text-link hover:text-link-hover transition-colors"
                 target="_blank"
-                rel="noopener noreferrer"
-              >
+                rel="noopener noreferrer">
                 GitHub
+              </Link>
+            </div>
+            <div className="space-y-2 mb-2">
+              <Link 
+                href="https://linkedin.com/in/firmanhp" 
+                className="block text-sm text-link hover:text-link-hover transition-colors"
+                target="_blank"
+                rel="noopener noreferrer">
+                Linkedin
               </Link>
             </div>
           </div>
@@ -37,10 +43,10 @@ export default function Footer() {
         {/* Copyright */}
         <div className="mt-8 pt-8" style={{borderTop: '1px solid #313244'}}>
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-xs" style={{color: '#6c7086'}}>
+            <p className="text-xs text-caption">
               © {currentYear} firmanhp. Built with Next.js and ❤️
             </p>
-            <p className="text-xs mt-2 md:mt-0" style={{color: '#6c7086'}}>
+            <p className="text-xs mt-2 md:mt-0 text-caption">
               Theme uses Catppuccin color scheme.
             </p>
           </div>
