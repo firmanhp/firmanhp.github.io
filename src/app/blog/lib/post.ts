@@ -29,23 +29,24 @@ export async function listPosts(): Promise<Post[]> {
     }));
 }
 
-export async function getPostMetadata(posts: Post[]): Promise<PostMetadata[]> {
-  const metadata =
-    await Promise.all(posts
-      .map(async (post: Post) => {
-        const content = await fs.promises.readFile(post.filePath, 'utf8');
-        const { data } = matter(content);
-        return {
-          title: data.title || 'Untitled',
-          date: new Date(data.date || ''),
-          description: data.description || '',
-          tags: data.tags || [],
-          slug: post.slug,
-          previewImagePath: data.previewImagePath,
-          previewImageAlt: data.previewImageAlt,
-        };
-      }));
+export function makePostFromSlug(slug: string): Post {
+  return {
+    filePath: path.join(POSTS_DIR, slug) + '.mdx',
+    slug: slug
+  };
+}
 
-  return metadata.sort((a: PostMetadata, b: PostMetadata) => b.date.getTime() - a.date.getTime());
+export async function getPostMetadata(post: Post): Promise<PostMetadata> {
+  const content = await fs.promises.readFile(post.filePath, 'utf8');
+  const { data } = matter(content);
+  return {
+    title: data.title || 'Untitled',
+    date: new Date(data.date || ''),
+    description: data.description || '',
+    tags: data.tags || [],
+    slug: post.slug,
+    previewImagePath: data.previewImagePath,
+    previewImageAlt: data.previewImageAlt,
+  };
 }
 

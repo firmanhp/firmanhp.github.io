@@ -12,6 +12,8 @@ import 'highlight.js/styles/github-dark.css'
 import TableOfContents from '../components/TableOfContents'
 import { remarkDirectiveBlocks } from '@/app/blog/lib/mdx-remark-directive-blocks'
 import remarkImageCaptions from '../lib/mdx-remark-image-captions'
+import type { Metadata } from "next";
+import { getPostMetadata, makePostFromSlug } from '@/app/blog/lib/post'
 
 const POSTS_DIR = path.join(process.cwd(), 'src/app/blog/posts')
 
@@ -20,6 +22,15 @@ export async function generateStaticParams() {
   return fs.readdirSync(POSTS_DIR, { withFileTypes: true })
     .filter(filename => filename.name.endsWith('.mdx'))
     .map((filename) => ({ slug: filename.name.slice(0, -4) }))
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = makePostFromSlug(slug);
+  const metadata = await getPostMetadata(post);
+  return {
+    title: metadata.title,
+  };
 }
 
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {

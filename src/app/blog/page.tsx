@@ -1,5 +1,7 @@
-import BlogPage from '@/app/blog/page/[page]/page'
+import { redirect } from 'next/navigation'
+
+
 
 export default async function Blog() {
-  return BlogPage({ params: Promise.resolve({ page: "1" })});
+  return redirect('/blog/page/1');
 }

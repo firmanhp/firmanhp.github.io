@@ -4,6 +4,7 @@ import { PostMetadata, getPostMetadata, listPosts } from "@/app/blog/lib/post"
 import { paginateData } from "@/app/blog/lib/pagination"
 import NotFound from '@/app/not-found';
 import Pagination from '@/app/blog/components/Pagination'
+import { Metadata } from 'next';
 
 const POSTS_PER_PAGE = 10;
 
@@ -56,6 +57,15 @@ function postEntryComponent(post: PostMetadata) {
   );
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ page: string }> }): Promise<Metadata> {
+  const { page } = await params;
+  const pageNum = Number(page);
+  
+  return {
+    title: `Page blogs ${pageNum}`,
+  }
+}
+
 export default async function BlogPosts({ params }: { params: Promise<{ page: string }> }) {
   const { page } = await params;
   const pageNum = Number(page);
@@ -64,7 +74,8 @@ export default async function BlogPosts({ params }: { params: Promise<{ page: st
   }
 
   const pagination = paginateData((await listPosts()).toReversed(), POSTS_PER_PAGE, Number(page));
-  const posts = await getPostMetadata(pagination.data);
+  const posts = (await Promise.all(pagination.data.map(getPostMetadata)))
+    .sort((a: PostMetadata, b: PostMetadata) => b.date.getTime() - a.date.getTime());
   const postEntryComponents = posts.map(postEntryComponent);
 
   return (
