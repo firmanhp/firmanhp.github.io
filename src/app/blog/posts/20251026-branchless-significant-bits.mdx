@@ -1,0 +1,429 @@
+---
+title: "Branchlessly finding the index of least/most significant bit"
+date: "2025-10-26"
+categories: ["General"]
+description: "Understanding a bitwise magic trick (or, hack)"
+---
+
+As I was doomscrolling on X, I stumbled upon an engagement bait post that says
+something like this:
+
+> If you are a good quality software engineer, then this code should be obvious
+> to you.
+
+Then shows up an undocumented code snippet in C++:
+
+```c++
+uint8_t msb(uint32_t v)
+{
+  static constexpr uint8_t POSITIONS[32] = {
+    0,  9,  1, 10, 13, 21,  2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+    8, 12, 20, 28, 15, 17, 24,  7, 19, 27, 23,  6, 26,  5, 4, 31
+  };
+  v |= (v >>  1);
+  v |= (v >>  2);
+  v |= (v >>  4);
+  v |= (v >>  8);
+  v |= (v >> 16);
+  return POSITIONS[(v * 0x07C4ACDDu) >> 27];
+}
+```
+
+Which, of course, got some people mad because of the obscure, uncommented
+"clever" code. The bait worked. If you see the name of the function, you can
+tell that (assuming the name is not lying) is trying to look up the **most
+significant bit** of the value v, and looking at the `POSITIONS` array used as
+the answer, it must be the index of the significant bit.
+
+Let's try to understand what the code above actually does. First, we have to
+understand how to look up the index of least significant bit.
+
+## Least significant bit
+
+We call the least significant bit of a binary number as the "rightmost" `1` in
+the number. For example, least significant bit of `0b00011010` is the second
+rightmost bit (if you start counting from 1) or bit 1 (if you start counting
+from 0). As for the most significant bit, it's the leftmost `1` in the number.
+
+### Isolating the least significant bit
+
+There's a well known trick in isolating the LSB of a binary number. Assume that
+`x` is an unsigned integer, then we can isolate the LSB using:
+
+```c++
+x = x & (~x + 1)
+```
+
+or also written as:
+
+```c++
+x = x & (-x)
+```
+
+To demonstrate:
+
+```
+x           = 00001001110000
+~x          = 11110110001111
+-x = ~x + 1 = 11110110010000
+
+x      = 00001001110000
+-x     = 11110110010000
+------------------------- &
+x&(-x) = 00000000010000
+```
+
+Using this, we can isolate the LSB of the number that we are interested in, but
+how do we find the index?
+
+### Finding the index of the LSB
+
+After we isolate the LSB, then looking up the index is as simple as doing a
+for-loop:
+
+```c++
+// Returns the index (0-based) of least significant bit of x.
+uint8_t lsb(uint32_t x) {
+  assert(x > 0);
+
+  // Isolate LSB
+  x &= -x;
+
+  // Find the index.
+  for (int i = 0; i < 32; ++i) {
+    if ((x & (1u << i)) > 0)
+      return i;
+  }
+
+  // Unreachable code
+  __builtin_unreachable();
+}
+```
+
+However, this uses a loop (and therefore a branch) to find, can we do better
+than this?
+
+### De Bruijn Sequence
+
+Let's step aside from all binary stuffs, there's a concept called [De Bruijn
+sequence](https://en.wikipedia.org/wiki/De_Bruijn_sequence), which in simple
+terms, is a cyclic string `S` made from a set of K characters, such that each
+possible combination of characters with length N appears **exactly once** in S.
+For example, if we have `{0, 1}` as the set of characters (a binary string), and
+we want all combination of characters of length 3 to appear exactly once, then
+one example of a string for that is 0001011100. Let's demonstrate.
+
+```
+All combinations of {0,1} with length 3:
+000 001 010 011
+100 101 110 111
+
+0001011100
+000.......
+.001......
+..010.....
+...101....
+....011...
+.....111..
+......110.
+.......100
+```
+
+De Bruijn sequence is cyclic, and therefore we can trim the last 2 (`N-1`)
+characters in the string: `0001011100 --> 0001011100`, or `1110100011 -->
+11101000`, because they will be the same as the first 2 characters. By
+definition, the above example is the De Bruijn sequence of order `N` on a
+`K`-size characters, or `DB(K,N)`. We will not be discussing how to find the
+sequence, which you can look up on Wikipedia link above.
+
+### Exploiting the sequence to our benefit
+
+We can try to take a look at one De Bruijn sequence for binary characters with
+length 5 i.e. `DB(2, 5)`: `0000 0111 1100 0100 1010 1100 1101 1101` (actual
+string is `0000 0111 1100 0100 1010 1100 1101 1101 + 0000`), with added space
+for clarity. This string contains exactly one of each possible combination of
+binary strings of length 5. This will be really useful for our trick, and is
+actually the origin of the magic number of the `msb` code above `0x07C4ACDD`.
+
+:::hint
+Among all possible `DB(2, 5)`s, we must choose the ones starting with
+`00000` so that the string also ends with `0000` to make our lives easier and
+make the magic number fit within `uint32_t`. The last `0000` will not be
+included in the magic number, but we will always know that they will always be
+0. Hence, `0x07C4ACDD`.
+:::
+
+Isolating the LSB of `x` results in a number that is a power of 2 (say, `2^P`).
+Thus, multiplying this number to the magic number means that we are bit-shifting
+the magic number to the left by P. Since the magic number is a De Bruijn
+sequence, then:
+- Each substring of length 5 will be unique (by De Bruijn sequence definition),
+  therefore
+- The first 5 digits of `MAGIC_NUMBER * 2^P` (in 32-bit number space) will be
+  unique based on different `P` (`0 <= P < 32`).
+
+To demonstrate:
+
+```
+MAGIC_NUMBER = 0x07C4ACDD = 0b00000111110001001010110011011101
+
+MAGIC_NUMBER * 2^0        = 0b|00000|111110001001010110011011101
+MAGIC_NUMBER * 2^1        = 0b|00001|111100010010101100110111010
+MAGIC_NUMBER * 2^2        = 0b|00011|111000100101011001101110100
+MAGIC_NUMBER * 2^3        = 0b|00111|110001001010110011011101000
+MAGIC_NUMBER * 2^4        = 0b|01111|100010010101100110111010000
+...
+MAGIC_NUMBER * 2^28       = 0b|11010|000000000000000000000000000
+MAGIC_NUMBER * 2^29       = 0b|10100|000000000000000000000000000
+MAGIC_NUMBER * 2^30       = 0b|01000|000000000000000000000000000
+MAGIC_NUMBER * 2^31       = 0b|10000|000000000000000000000000000
+```
+
+Since each `P` results in different 5 digit prefix, then logically we can check
+the prefix, and figure out the P:
+
+```c++
+uint8_t lsb(uint32_t x) {
+  constexpr uint32_t MAGIC = 0x07C4ACDDu;
+  // Isolate the LSB
+  const uint32_t x_isolated = x & -x;
+  // Get first five digits of the multiplied number
+  const uint32_t magic_prefix = (x_isolated * MAGIC) >> 27;
+
+  if (magic_prefix == 0b00000)
+    return 0;
+  if (magic_prefix == 0b00001)
+    return 1;
+  if (magic_prefix == 0b00011)
+    return 2;
+  // ...
+  if (magic_prefix == 0b01000)
+    return 30;
+  if (magic_prefix == 0b10000)
+    return 31;
+  
+  // Unreachable code
+  __builtin_unreachable();
+}
+```
+
+We still have branches here (`if`), we can further optimize by building a lookup
+table, instead of using `if`s. I have made an automation script using Python to
+generate the lookup table:
+
+```py
+MAGIC = 0x07C4ACDD
+MASK  = 0xFFFFFFFF
+
+lookup_table = [0] * 32
+for i in range(32):
+  prefix = MASK & (MAGIC << i)
+  prefix = prefix >> 27
+  lookup_table[prefix] = i
+
+print("Lookup table:", lookup_table)
+```
+
+```shell
+Lookup table: [0, 1, 10, 2, 11, 14, 22, 3, 30, 12, 15, 17, 19, 23, 26, 4, 31, 9, 13, 21, 29, 16, 18, 25, 8, 20, 28, 24, 7, 27, 6, 5]
+```
+
+Then, we can construct our code like this:
+
+```c++
+uint8_t lsb(uint32_t x) {
+  constexpr uint8_t LOOKUP[32] = {
+     0, 1, 10,  2, 11, 14, 22,  3, 30, 12, 15, 17, 19, 23, 26, 4,
+    31, 9, 13, 21, 29, 16, 18, 25,  8, 20, 28, 24,  7, 27,  6, 5
+  };
+  constexpr uint32_t MAGIC = 0x07C4ACDDu;
+  // Isolate the LSB
+  const uint32_t x_isolated = x & -x;
+  // Get first five digits of the multiplied number
+  const uint32_t magic_prefix = (x_isolated * MAGIC) >> 27;
+  return LOOKUP[magic_prefix];
+}
+```
+
+And we finally figured out the branchless LSB!
+
+## Most significant bit
+
+To modify the function to find the index of MSB, we need to find a way to
+isolate the MSB instead of LSB. One way to do this on a 32-bit unsigned integer
+is:
+
+```c++
+uint32_t isolate_msb(uint32_t v) {
+  // Set every bit after MSB
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  // After doing above, our value will look like 0b000.1.1111
+  v &= ~(v >> 1); // Unset every bit after MSB
+  return v;
+}
+```
+
+Then, we can modify the LSB function and isolate the MSB instead of LSB.
+
+```c++
+uint32_t isolate_msb(uint32_t v) {
+  // Set every bit after MSB
+  v |= v >> 1;
+  v |= v >> 2;
+  v |= v >> 4;
+  v |= v >> 8;
+  v |= v >> 16;
+  // After doing above, our value will look like 0b000.1.1111 = 2^P - 1
+  v &= ~(v >> 1); // Unset every bit after MSB
+  return v;
+}
+
+uint8_t msb(uint32_t x) {
+  constexpr uint8_t LOOKUP[32] = {
+     0, 1, 10,  2, 11, 14, 22,  3, 30, 12, 15, 17, 19, 23, 26, 4,
+    31, 9, 13, 21, 29, 16, 18, 25,  8, 20, 28, 24,  7, 27,  6, 5
+  };
+  constexpr uint32_t MAGIC = 0x07C4ACDDu;
+  // Get first five digits of the multiplied number
+  const uint32_t magic_prefix = (isolate_msb(x) * MAGIC) >> 27;
+  return LOOKUP[magic_prefix];
+}
+```
+
+### Final step
+
+As you can see that the first function posted does not contain `v &= ~(v >> 1)`
+and the lookup table is different, despite using the same magic number.
+
+If we remove the operation `v &= ~(v >> 1)`, actually we can still generate
+unique 5 bit prefixes after multiplying with `MAGIC`. We can prove it by
+creating a script which tries for each possible values:
+
+```py
+MAGIC = 0x07C4ACDD
+MASK  = 0xFFFFFFFF
+
+lookup_table = [0] * 32
+generated_prefixes = set() # must be 32 in total
+for i in range(1, 32 + 1):
+  number = (2**i) - 1
+  prefix = MASK & (MAGIC * number)
+  prefix = prefix >> 27
+  generated_prefixes.add(prefix)
+
+print("Generated prefixes:", generated_prefixes)
+```
+
+```sh
+Generated prefixes: {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+```
+
+We have proved it. Then, we can figure out the lookup table:
+
+```py
+MAGIC = 0x07C4ACDD
+MASK  = 0xFFFFFFFF
+
+lookup_table = [0] * 32
+for i in range(1, 32 + 1):
+  number = (2**i) - 1
+  prefix = MASK & (MAGIC * number)
+  prefix = prefix >> 27
+  lookup_table[prefix] = i - 1 # we start from 0
+
+print("Lookup table:", lookup_table)
+```
+
+```sh
+Lookup table: [0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30, 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31]
+```
+
+Hence, we finally come up with the branchless index-of-MSB function:
+
+```c++
+uint8_t msb(uint32_t v)
+{
+  static constexpr uint8_t POSITIONS[32] = {
+    0,  9,  1, 10, 13, 21,  2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
+    8, 12, 20, 28, 15, 17, 24,  7, 19, 27, 23,  6, 26,  5, 4, 31
+  };
+  v |= (v >>  1);
+  v |= (v >>  2);
+  v |= (v >>  4);
+  v |= (v >>  8);
+  v |= (v >> 16);
+  return POSITIONS[(v * 0x07C4ACDDu) >> 27];
+}
+```
+
+## We have better tools
+
+This problem is already well known, and modern CPUs should already have special
+instructions to tackle this problem. Few that I know of are `BSR` (Bit Scan
+Reverse) and `BSF` (Bit Scan Forward) on x86 ISA. The GCC compiler also provides
+builtin functions that help us retrieve these easily. You can see the [list
+here](https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html). We are interested in:
+- `__builtin_ffs`: Find first set (LSB)
+- `__builtin_clz`: Count leading zero (can be used for finding MSB i.e. `31 - CLZ(x)`)
+
+They also have versions of the function that accepts `long long`.
+
+[Godbolt Link](https://godbolt.org/z/M8vzs4TcK)
+```c++
+uint8_t lsb_builtin(uint32_t v) {
+    return __builtin_ctz(v);
+}
+
+uint8_t msb_builtin(uint32_t v) {
+    return 31 - __builtin_clz(v);
+}
+```
+:::hint
+Interestingly, the GCC trunk compiler recognized our De Bruijn sequence approach
+of MSB, and used `BSR` then ignored the lookup table.
+:::
+
+The generates assembly using flag `-std=c++20 -O3` on `x86-64 GCC (trunk)` is as follows:
+
+```S
+"lsb_builtin(unsigned int)":
+        xor     eax, eax
+        bsf     eax, edi
+        ret
+"msb_builtin(unsigned int)":
+        bsr     edi, edi
+        mov     eax, 31
+        xor     edi, 31
+        sub     eax, edi
+        ret
+```
+
+which uses `BSF` and `BSF`. Actually for MSB if I use `31 ^ CLZ(x)` instead of
+`31 - CLZ(x)` it can generate less assembly.
+
+```c++
+uint8_t msb_builtin(uint32_t v) {
+    return 31 ^ __builtin_clz(v);
+}
+```
+
+```s
+"msb_builtin(unsigned int)":
+        bsr     eax, edi
+        ret
+```
+
+:::danger
+Most of these does undefined behavior when the input is 0, be careful!
+:::
+
+## Conclusion
+
+After a lengthy exploration, and finding out that they don't really matter
+because our HW now supports it, does everything above really matter? Well, I
+guess you can learn a thing or two. But which one is actually faster? By how
+much? If I have time, maybe I will write a post on the performance benchmark.
