@@ -1,0 +1,207 @@
+---
+title: "C++'s std::vector may not use your move constructor"
+date: "2025-11-01"
+categories: ["General", "C++"]
+description: "An insight I get from adding noexcept-s"
+---
+
+## Vector resizing
+
+We know that in C++, a dynamic array `std::vector` works by expanding its space
+when the number of elements exceeds its current capacity:
+
+```
+std::vector<uint8_t> vec;
+current memory visualization:
+idx:  [00][01][02][03]
+data:  0A  0B  0C  0D
+
+When executing "vec.push_back(0x0E)":
+(1) Checks capacity (full) --> expand
+memory:
+idx:  [00][01][02][03]
+data:  0A  0B  0C  0D
+
+new memory (xx = undefined):
+idx:  [00][01][02][03][04][05][06][07]
+data:  xx  xx  xx  xx  xx  xx  xx  xx
+
+(2) Copy/move the old contents to new memory
+new memory (xx = undefined):
+idx:  [00][01][02][03][04][05][06][07]
+data:  0A  0B  0C  0D  xx  xx  xx  xx
+
+(3) Free the old memory
+
+(4) Insert the new member (0x0E):
+new memory (xx = undefined):
+idx:  [00][01][02][03][04][05][06][07]
+data:  0A  0B  0C  0D  0E  xx  xx  xx
+```
+
+## Copying is likely expensive
+
+If you have a non-trivial data structure which owns an allocated memory that you
+manage yourself, you probably really care about whether the resizing step inside
+the `std::vector` copies your data or moves your data.
+
+Here's a toy example.
+
+[Godbolt link](https://godbolt.org/z/bzcaqc8oE)
+```c++
+#include <vector>
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include <iostream>
+
+class MyString {
+public:
+    // ctor
+    MyString(size_t size) : size_(size), data_(new uint8_t[size]) {}
+    // dtor
+    ~MyString() { delete[] data_; }
+    // Copy ctor
+    MyString(const MyString& o) : MyString(o.size_) {
+        std::cout << "copy ctor is used\n";
+        std::memcpy(data_, o.data_, size_);
+    }
+    // Copy assignment
+    MyString& operator=(const MyString& o) {
+        if (this == &o)
+            return *this;
+
+        delete[] data_;
+        size_ = o.size_;
+        data_ = new uint8_t[size_];
+        std::memcpy(data_, o.data_, size_);
+        return *this;
+    }
+    // Move ctor
+    MyString(MyString&& o) : size_(o.size_), data_(o.data_) {
+        std::cout << "move ctor is used\n";
+        o.size_ = 0;
+        o.data_ = nullptr;
+    }
+    // Move assignment
+    MyString& operator=(MyString&& o) {
+        std::swap(size_, o.size_);
+        std::swap(data_, o.data_);
+        return *this;
+    }
+
+
+private:
+    size_t size_;
+    uint8_t* data_;
+};
+
+int main(void) {
+    constexpr size_t SIZE = 50;
+    std::vector<MyString> my_data;
+    for (int i=0; i<8;++i) {
+        std::cout << "-----emplace_back\n";
+        my_data.emplace_back(SIZE);
+        std::cout << "-----\n";
+    }
+    return 0;
+}
+```
+
+Even with move constructor defined like above, you will see that the
+`std::vector` resizes and copies the data, instead of moving:
+
+```sh
+-----emplace_back
+-----
+-----emplace_back
+copy ctor is used
+-----
+-----emplace_back
+copy ctor is used
+copy ctor is used
+-----
+-----emplace_back
+-----
+-----emplace_back
+copy ctor is used
+copy ctor is used
+copy ctor is used
+copy ctor is used
+-----
+-----emplace_back
+-----
+-----emplace_back
+-----
+-----emplace_back
+-----
+```
+
+## Why
+
+The reason is that in the standard, `std::vector::resize` needs to have a
+[**strong exception safety
+guarantee**](https://en.cppreference.com/w/cpp/container/vector/resize.html).
+
+To put it simply, when an exception happened inside resizing step, this exception
+safety guarantees that the program must be in a proper state as if no resize has
+happened. If you allocate a new memory region and copy the data, rolling back is
+easy -- you just destroy the data you copied, and deallocate that new memory.
+However, if you move the data and exception happened, then you are left with
+half-moved data, and you don't know how to properly roll it back.
+
+## Solution
+
+If you are sure that your move constructor does not throw, provide `noexcept` keyword to them:
+
+```c++
+// Move ctor
+MyString(MyString&& o) noexcept : size_(o.size_), data_(o.data_) {
+    std::cout << "move ctor is used\n";
+    o.size_ = 0;
+    o.data_ = nullptr;
+}
+```
+
+Then you can see it now uses the move constructor:
+
+```
+-----emplace_back
+-----
+-----emplace_back
+move ctor is used
+-----
+-----emplace_back
+move ctor is used
+move ctor is used
+-----
+-----emplace_back
+-----
+-----emplace_back
+move ctor is used
+move ctor is used
+move ctor is used
+move ctor is used
+-----
+-----emplace_back
+-----
+-----emplace_back
+-----
+-----emplace_back
+-----
+```
+
+You can also add `noexcept` on other operations as long as they are actually not
+throwing errors.
+
+## Takeaways
+
+Rigorously declaring your function can help the compiler figure out the best
+optimization path. In this example, using `noexcept` gives opportunity to the
+optimization so they can use it without violating the C++ requirement.
+
+## References
+
+- [C++ Reference: std::vector::resize](https://en.cppreference.com/w/cpp/container/vector/resize.html)
+- [C++ Reference: std::move_if_noexcept](https://en.cppreference.com/w/cpp/utility/move_if_noexcept.html)
+- [GCC Mailing list: `std::vector<T>` does not use the move constructor of T to change its capacity](https://gcc.gnu.org/pipermail/libstdc++/2015-January/042381.html)
