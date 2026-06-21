@@ -1,0 +1,256 @@
+---
+title: "C++'s std::vector, but relocating data is cheap(er)"
+date: "2026-06-20"
+categories: ["General", "C++"]
+description: "An idea from a random YouTube comment I saw months ago"
+---
+
+This is sort of in a similar theme in the previous post, where I talked about
+the `std::move` behavior under `std::vector`'s resizing. I stumbled upon a
+YouTube comment that mentioned an idea about resizing vectors but you don't
+have to actually move the data contents. Unfortunately, that was few months ago,
+and I already lost the link. I just happened to have the time to try out this idea.
+
+
+## The idea
+
+In high level, everything that is running under a process are done using
+virtual memory addressing space. Those contiguous arrays are only contiguous in virtual
+memory space, but not necessarily in physical memory space.
+
+```
+std::vector<int> v = {A, B, C, D, E, F, G, H};
+v.data(); // 0x1000
+
+Memory layout (virtual):
+         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE
+0x1000:   A    B    C    D    E    F    G   H
+
+Physical memory layout (assume 1 frame holds 8 bytes/4 ints):
+
+Frame 0x3A000:   A    B    C    D
+Frame 0x3A001:   E    F    G    H
+
+Virtual -> Physical mapping:
+0x1000 -> Frame 0x3A000
+0x1008 -> Frame 0x3A008
+```
+
+The physical memory addresing works in frames/pages. Commonly, each page holds 4096 bytes (4 KB).
+This is configurable depending on what the operating system and CPU supports. It makes them
+easier to manage the memory and avoid fragmentation. In order to convert a virtual address to a physical address, the operating system uses a page table. The page table basically is just a map
+for that virtual address space to the actual physical memory address, and that is transparent
+to the user.
+
+### Resizing
+
+`std::vector` resizes itself by allocating a new memory segment longer than the current one,
+moving the data to the new segment, and then freeing the old segment. This is done to keep the
+data contiguous. Since they are mapped to a physical pages and in the physical space, they are
+not contiguous anyway, we can actually just "allocate the additional segment needed", and "update
+the mappings of the old segment".
+
+```
+std::vector<int> v = {A, B, C, D, E, F, G, H};
+v.data(); // 0x1000
+
+Memory layout (virtual):
+         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE
+0x1000:   A    B    C    D    E    F    G    H
+
+Virtual -> Physical mapping:
+0x1000 -> Frame 0x3A000
+0x1008 -> Frame 0x3A008
+
+Push extra data: {I, J, K, L}, extends vector by 4
+- Remap the virtual address 0x1000 to fit 12 bytes
+  - Reserved additional page in physical address 0x3B000
+- Virtual mapping now updates to
+  - 0x5000 -> Frame 0x3A000
+  - 0x5008 -> Frame 0x3A008
+  - 0x5010 -> Frame 0x3B000 (Our new page)
+
+Now, virtual memory layout is now:
+Memory layout (virtual, x is uninitialized data, usually zero):
+         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE
+0x5000:   A    B    C    D    E    F    G    H
+0x5010:   x    x    x    x
+
+Push {I, J, K, L} as usual.
+```
+
+Notice that we don't have to move the data, because the virtual address maps to the
+same physical pages as before.
+
+
+### Linux's mremap
+
+Linux provides a system call which does that exactly: [mremap](https://man7.org/linux/man-pages/man2/mremap.2.html) which allows to remap a memory mapping to shrink/enlarge the size.
+
+## The code
+
+Welp, enough talk, I just want to prove whether the idea works anyway.
+
+```c++
+#include <sys/mman.h>
+#include <utility>
+#include <math.h>
+#include <cassert>
+#include <cstring>
+
+namespace virtual_vector {
+
+template <typename T> class VirtualVector {
+public:
+  VirtualVector() : data_(nullptr), capacity_(0), size_(0) {}
+  ~VirtualVector() {
+    for (size_t i = 0; i < size_; ++i) {
+      data_[i].~T();
+    }
+    if (data_ != nullptr) {
+      munmap(static_cast<void *>(data_), capacity_ * sizeof(T));
+    }
+  }
+
+
+  void reserve(size_t capacity) {
+    if (capacity <= capacity_) {
+      return;
+    }
+
+    if (data_ == nullptr) {
+      data_ = static_cast<T *>(mmap(nullptr, capacity * sizeof(T),
+                                    PROT_READ | PROT_WRITE,
+                                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    } else {
+      data_ = static_cast<T *>(mremap(static_cast<void *>(data_),
+                                      capacity_ * sizeof(T), capacity * sizeof(T),
+                                      MREMAP_MAYMOVE));
+    }
+    assert(data_ != MAP_FAILED);
+    capacity_ = capacity;
+  }
+
+
+  void push_back(T value) {
+    if (size_ == capacity_) {
+      reserve(std::max(1UL, capacity_ * 2));
+    }
+    new (&data_[size_++]) T(std::move(value));
+  }
+
+  
+  T* data() { return data_; }
+  const T* data() const { return data_; }
+
+private:
+  T *data_;
+  size_t capacity_;
+  size_t size_;
+};
+
+} // namespace virtual_vector
+
+```
+
+That's it... nothing special. We used `mmap/munmap/mremap` instead of
+`new/delete` to achieve it.
+
+## Benchmark
+
+So to spin up how this thing performs:
+
+```c++
+
+static const std::string kStr(64, 'x');
+
+static void BM_VirtualVector_String_PushBack(benchmark::State& state) {
+    const int N = state.range(0);
+    for (auto _ : state) {
+        VirtualVector<std::string> v;
+        for (int i = 0; i < N; ++i) v.push_back(kStr);
+        benchmark::DoNotOptimize(v.data());
+    }
+    state.SetItemsProcessed(state.iterations() * N);
+}
+
+static void BM_StdVector_String_PushBack(benchmark::State& state) {
+    const int N = state.range(0);
+    for (auto _ : state) {
+        std::vector<std::string> v;
+        for (int i = 0; i < N; ++i) v.push_back(kStr);
+        benchmark::DoNotOptimize(v.data());
+    }
+    state.SetItemsProcessed(state.iterations() * N);
+}
+
+BENCHMARK(BM_VirtualVector_String_PushBack)->RangeMultiplier(4)->Range(512, 1 << 26);
+BENCHMARK(BM_StdVector_String_PushBack)->RangeMultiplier(4)->Range(512, 1 << 26);
+
+struct LargePOD {
+    int value;
+    char data[1024 - sizeof(int)];
+};
+
+static void BM_VirtualVector_LargePOD_PushBack(benchmark::State& state) {
+    const int N = state.range(0);
+    for (auto _ : state) {
+        VirtualVector<LargePOD> v;
+        for (int i = 0; i < N; ++i) {
+            LargePOD p{}; p.value = i;
+            v.push_back(p);
+        }
+        benchmark::DoNotOptimize(v.data());
+    }
+    state.SetItemsProcessed(state.iterations() * N);
+}
+
+static void BM_StdVector_LargePOD_PushBack(benchmark::State& state) {
+    const int N = state.range(0);
+    for (auto _ : state) {
+        std::vector<LargePOD> v;
+        for (int i = 0; i < N; ++i) {
+            LargePOD p{}; p.value = i;
+            v.push_back(p);
+        }
+        benchmark::DoNotOptimize(v.data());
+    }
+    state.SetItemsProcessed(state.iterations() * N);
+}
+
+BENCHMARK(BM_VirtualVector_LargePOD_PushBack)->RangeMultiplier(4)->Range(512, 1 << 21);
+BENCHMARK(BM_StdVector_LargePOD_PushBack)->RangeMultiplier(4)->Range(512, 1 << 21);
+
+BENCHMARK_MAIN();
+
+```
+
+![](/assets/20260620-stdvector-cheap-relocation/img/LargePOD_PushBack.png)
+
+On a vector of large POD/structs (1KB above), it scales pretty well. It was faster than `std::vector` starting from ~16K elements.
+I guess that's where the relocation exceeds our cache (just a speculation!).
+
+![](/assets/20260620-stdvector-cheap-relocation/img/String_PushBack.png)
+
+This is where it gets interesting. This is actually illegal since you actually cannot use `std::string` here due to the reason
+I explain later. However, it seemed like the `VirtualVector` had some advantage until at some point where it goes back to
+`std::vector` (even losing at it!). Perhaps that the `mremap` overhead and rewriting the page table is getting more expensive
+the more pages are remapped.
+
+## Worth it?
+
+This method only works if the containing objects do not contain pointers to somewhere in its own struct. For example,
+`std::string` has a short string optimization where short strings are contained within the `std::string` struct itself,
+and therefore no extra heap allocation. In that case, the `::data()` will point to some memory region within the `std::struct`.
+If we remap the address, the pointer is no longer valid.
+
+As far as I could tell from above, this approach is only worth if what you need is a contiguous, dynamic array of large PODs.
+Again, these above assumes that you don't know the final count of the elements. If you know, `std::vector::reserve()` does
+the job very well already.
+
+For me, that is a very niche requirement.
+
+
+## References
+
+- [mremap](https://man7.org/linux/man-pages/man2/mremap.2.html)
