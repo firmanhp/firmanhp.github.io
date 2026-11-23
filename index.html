@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Home</title><meta name="description" content="Notes and writing."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/_astro/index.ConVsvVs.css">
+<style>.landing[data-astro-cid-j7pv25f6]{max-width:38rem;padding-top:5.5rem;padding-bottom:2rem}.landing[data-astro-cid-j7pv25f6] h1[data-astro-cid-j7pv25f6]{font-size:2.35rem;margin-bottom:.65rem}.lead[data-astro-cid-j7pv25f6]{margin:0 0 2.5rem;font-size:1.05rem;color:var(--text-muted)}.primary-links[data-astro-cid-j7pv25f6]{display:flex;flex-direction:column;border-top:1px solid var(--border)}.dest-link[data-astro-cid-j7pv25f6]{display:flex;align-items:center;justify-content:space-between;padding:.95rem .25rem;border-bottom:1px solid var(--border);font-size:1.05rem;font-weight:700;color:var(--accent);text-decoration:none}.dest-link[data-astro-cid-j7pv25f6]:hover{color:var(--accent-hover);text-decoration:none;background-color:var(--bg-elevated)}.arrow[data-astro-cid-j7pv25f6]{color:var(--text-muted);font-weight:400}.secondary-links[data-astro-cid-j7pv25f6]{display:flex;flex-wrap:wrap;gap:1.5rem;margin-top:1.75rem;font-size:.92rem}.secondary-links[data-astro-cid-j7pv25f6] a[data-astro-cid-j7pv25f6]{color:var(--text-muted)}.secondary-links[data-astro-cid-j7pv25f6] a[data-astro-cid-j7pv25f6]:hover{color:var(--text-strong)}@media(max-width:640px){.landing[data-astro-cid-j7pv25f6]{padding-top:3rem}}
+</style></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link active" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <section class="site-shell landing" data-astro-cid-j7pv25f6> <h1 data-astro-cid-j7pv25f6>Hello.</h1> <p class="lead" data-astro-cid-j7pv25f6>A quiet corner of the web for notes and experiments.</p> <div class="primary-links" data-astro-cid-j7pv25f6> <a href="/blog/" class="dest-link" data-astro-cid-j7pv25f6> <span data-astro-cid-j7pv25f6>Blog</span> <span class="arrow" aria-hidden="true" data-astro-cid-j7pv25f6>→</span> </a><a href="/blog/rss.xml" class="dest-link" data-astro-cid-j7pv25f6> <span data-astro-cid-j7pv25f6>RSS</span> <span class="arrow" aria-hidden="true" data-astro-cid-j7pv25f6>→</span> </a>  </div> <div class="secondary-links" data-astro-cid-j7pv25f6> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-j7pv25f6> GitHub </a><a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-j7pv25f6> LinkedIn </a> </div> </section>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> 

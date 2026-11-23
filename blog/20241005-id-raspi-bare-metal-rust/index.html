@@ -1,0 +1,694 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Pemrograman Bare Metal dalam Raspberry Pi dengan Rust</title><meta name="description" content="(Post in Indonesian) Belajar bare metal programming + Rust"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20241005-id-raspi-bare-metal-rust" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Pemrograman Bare Metal dalam Raspberry Pi dengan Rust</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-10-05T09:00:00.000Z" data-astro-cid-yvbahnfj>Oct 5, 2024</time> <a href="/blog/lang/id/" class="meta-badge" data-astro-cid-yvbahnfj>ID</a> <a href="/blog/tags/qemu/" class="meta-tag" data-astro-cid-yvbahnfj>#qemu</a><a href="/blog/tags/raspberry-pi/" class="meta-tag" data-astro-cid-yvbahnfj>#raspberry-pi</a><a href="/blog/tags/bare-metal/" class="meta-tag" data-astro-cid-yvbahnfj>#bare-metal</a><a href="/blog/tags/systems-programming/" class="meta-tag" data-astro-cid-yvbahnfj>#systems-programming</a><a href="/blog/tags/indonesia/" class="meta-tag" data-astro-cid-yvbahnfj>#indonesia</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#intro" data-toc-link="intro" data-astro-cid-xvrfupwn>Intro</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#persiapan" data-toc-link="persiapan" data-astro-cid-xvrfupwn>Persiapan</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#target" data-toc-link="target" data-astro-cid-xvrfupwn>Target</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#implementasi" data-toc-link="implementasi" data-astro-cid-xvrfupwn>Implementasi</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#entry-point" data-toc-link="entry-point" data-astro-cid-xvrfupwn>Entry point</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#main-function" data-toc-link="main-function" data-astro-cid-xvrfupwn>Main Function</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#implementasi-gpio" data-toc-link="implementasi-gpio" data-astro-cid-xvrfupwn>Implementasi GPIO</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#menyusun-yang-sudah-dibangun" data-toc-link="menyusun-yang-sudah-dibangun" data-astro-cid-xvrfupwn>Menyusun yang sudah dibangun</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#build" data-toc-link="build" data-astro-cid-xvrfupwn>Build</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#linking" data-toc-link="linking" data-astro-cid-xvrfupwn>Linking</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#cross-compile" data-toc-link="cross-compile" data-astro-cid-xvrfupwn>Cross Compile</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#verifikasisanity-check" data-toc-link="verifikasisanity-check" data-astro-cid-xvrfupwn>Verifikasi/Sanity check</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#menjalankan-di-mesin" data-toc-link="menjalankan-di-mesin" data-astro-cid-xvrfupwn>Menjalankan di Mesin</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#referensi" data-toc-link="referensi" data-astro-cid-xvrfupwn>Referensi</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>Dari kemarin sebenernya bingung mau nulis ini dalam Bahasa Inggris atau enggak,
+tapi kalau dipikir-pikir resource bare metal programming/OS enggak begitu banyak
+dalam Bahasa Indonesia. Setelah ngoding C/C++ dan sempat rame juga tentang Rust
+(bahkan ada Zig sekarang), jadinya pengen coba nulis Rust sekalian belajar
+tentang hardware.</p>
+<h2 id="intro">Intro<a class="heading-anchor" aria-label="Link to section" href="#intro">#</a></h2>
+<p><em>Bare metal programming</em> artinya kita membuat program yang sangat dekat dengan
+hardware, seperti microcontroller, SoC. Apa bedanya sama pemrograman sistem
+biasa? Disini, kita bener-bener bikin program yang CPU langsung eksekusi tanpa
+bantuan OS. Ini artinya:</p>
+<ul>
+<li>Tidak ada <em>system call</em></li>
+<li>Tidak ada library dasar seperti <code>libc</code> (karena system callnya pun tidak ada)</li>
+<li>Tidak ada <em>memory management</em>: Tidak ada dynamic data structures seperti
+dynamic array, <em>malloc</em>, etc</li>
+<li>Program bekerja dalam physical memory by default, bukan virtual memory.</li>
+<li>Kita cuma punya instruksi CPU dan hardware-hardware yang ada di SoC.</li>
+</ul>
+<p>Kalau programming menggunakan Linux, Bedanya Linux sudah menyediakan interface
+system call yang sudah <em>mature</em>, dan banyak library-library yang sudah
+men-support Linux. Kali ini, kita akan meninggalkan Linux dan bisa dibilang
+membuat sistem operasi sendiri. Kita akan menulis program tersebut menggunakan
+Rust.</p>
+<h2 id="persiapan">Persiapan<a class="heading-anchor" aria-label="Link to section" href="#persiapan">#</a></h2>
+<p>Kali ini kita akan membuat program bare metal untuk Raspberry Pi 3 Model B (yang
+saya punya). Dilihat dari dari
+<a href="https://www.raspberrypi.com/products/raspberry-pi-3-model-b/">spesifikasinya</a>,
+Raspberry PI 3 Model B menggunakan <code>Quad Core 1.2GHz Broadcom BCM2837 64bit CPU</code>. BCM2837 sendiri pakai ARM Cortex-A53 sebagai core-nya, dengan ARMv8-A.
+Artinya, kita harus membuat program yang menggunakan instruksi ARMv8 yang
+ditambah dengan peripheral (hardware tambahan) dari BCM2837.</p>
+<p>Kita bisa dapatkan datasheet dari BCM2837
+<a href="https://github.com/raspberrypi/documentation/issues/325#issuecomment-379651504">disini</a>.
+Atau di link yang sudah saya mirrorkan
+<a href="/assets/20241005-id-raspi-bare-metal-rust/pdf/BCM2837-ARM-Peripherals-Revised-V2-1.pdf">disini</a></p>
+<p>Dalam PDF tersebut sudah disediakan cara berinteraksi untuk setiap komponen, dan
+alamat dari register tersebut.</p>
+<div class="callout callout-warning" data-callout="warning"><p>Datasheet tersebut dibuat dari dokumen BCM2835 namun beberapa di-edit manual
+untuk disesuaikan kepada BCM2837 (+ beberapa errata). Gambar di PDF mungkin
+tidak akurat.</p></div>
+<h3 id="target">Target<a class="heading-anchor" aria-label="Link to section" href="#target">#</a></h3>
+<p>Kita akan membuat program yang bisa mengontrol GPIO, dan membuat LED berkedip.
+Kita belum akan membuat interface yang bisa menampilkan tulisan, karena hal
+tersebut cukup kompleks dan masih sulit untuk memastikan <em>correctness</em>-nya.
+Untuk sekarang setidaknya kita ingin tahu apakah program kita berjalan dengan
+benar.</p>
+<h2 id="implementasi">Implementasi<a class="heading-anchor" aria-label="Link to section" href="#implementasi">#</a></h2>
+<div class="callout callout-hint" data-callout="hint"><p>Tutorial ini sebagian besar mengambil dari artikel wiki OSDev - Raspberry Pi
+Bare Bones. Link <a href="https://wiki.osdev.org/Raspberry_Pi_Bare_Bones">disini</a></p></div>
+<p>Buat folder project menggunakan <code>cargo init --bin --edition 2021</code>. Kita akan
+membuat beberapa komponen dari program, dimulai dari entry point sampai API
+untuk mengakses GPIO.</p>
+<h3 id="entry-point">Entry point<a class="heading-anchor" aria-label="Link to section" href="#entry-point">#</a></h3>
+<p>Di dalam <code>src/</code>, kita akan membuat entry point dari program kita dalam assembly,
+dengan filename <code>boot.S</code>. CPU akan pertama kali mengeksekusi kode ini.</p>
+<div class="code-block" data-code-block="" data-language="asm"><div class="code-block-header"><span class="code-lang">asm</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy asm code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="asm"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// AArch64 mode</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// To keep this </span><span style="color:#D73A49;--shiki-dark:#F47067">in</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> the first portion of the binary.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">.section "</span><span style="color:#6F42C1;--shiki-dark:#F69D50">.text</span><span style="color:#24292E;--shiki-dark:#ADBAC7">.boot"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// Make _start global.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#6CB6FF">.globl</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> _start</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// Entry point for the kernel. </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">Registers:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// x0 -> </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> bit pointer to DTB </span><span style="color:#D73A49;--shiki-dark:#F47067">in</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> memory (primary core only) / </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (secondary cores)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// x1 -> </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// x2 -> </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// x3 -> </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">// x4 -> </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> bit kernel entry point, _start location</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">_start:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">https:</span><span style="color:#24292E;--shiki-dark:#ADBAC7">//forums.raspberrypi.com/viewtopic.php?t=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">273010</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // read cpu id, stop slave cores</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    mrs     x1, mpidr_el1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    and</span><span style="color:#24292E;--shiki-dark:#ADBAC7">     x1, x1, #</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">3</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cbz     x1, 2f</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // cpu id > </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, stop</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    b       halt</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">2</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:  // cpu id == </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // set stack before our code</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    ldr     x5, =_start</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    mov</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     sp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, x5</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // clear bss</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    ldr     x5, =__bss_start</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    ldr     w6, =__bss_size</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:  cbz     w6, 2f</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    str</span><span style="color:#24292E;--shiki-dark:#ADBAC7">     xzr, [x5], #</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">8</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    sub</span><span style="color:#24292E;--shiki-dark:#ADBAC7">     w6, w6, #</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cbnz    w6, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1b</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // jump to C code, should </span><span style="color:#D73A49;--shiki-dark:#F47067">not</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> return</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">2</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:  </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">bl</span><span style="color:#24292E;--shiki-dark:#ADBAC7">      kernel_main</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    // for failsafe, halt this core</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">halt:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    wfe</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    b halt</span></span></code></pre></div>
+<p>Untuk penjelasan instruction sendiri bisa look-up sendiri lewat Google, disini
+saya akan menjelaskan garis besar apa yang dilakukan.</p>
+<h4 id="assembly-directive">Assembly Directive<a class="heading-anchor" aria-label="Link to section" href="#assembly-directive">#</a></h4>
+<p>Ada 2 <em>assembly directive</em> di atas: <code>.section</code>, dan <code>.globl</code>. Tujuan <em>directive</em>
+pertama untuk memunculkan <em>section</em> <code>.text.boot</code> yang dimulai dari instruksi
+pertama dibawahnya. Kedua, untuk memberitahu compiler bahwa <code>_start</code> adalah
+sebuah symbol yang public. Nanti section dan symbol di atas akan berguna pada
+saat proses <code>linking</code>, yang akan dijelaskan di bawah nanti.</p>
+<h4 id="single-core-only">Single-core only<a class="heading-anchor" aria-label="Link to section" href="#single-core-only">#</a></h4>
+<p>Pertama, semua CPU akan menyala dan mengeksekusi program yang sama (program
+kita). Agar tidak terjadi bentrok, kita mau “mematikan” CPU ID #1, #2, #3 dan
+biarkan CPU 0 yang berjalan.</p>
+<h4 id="stack-pointer">Stack Pointer<a class="heading-anchor" aria-label="Link to section" href="#stack-pointer">#</a></h4>
+<p>Kedua, kita mengatur posisi <em>stack pointer</em> kita tepat di atas alamat instruksi
+pertama kita, yang ditandai oleh symbol<code>_start</code>.</p>
+<div class="callout callout-hint" data-callout="hint"><p>Karena sistem stack di ARM itu arahnya “ke-atas” (saat <em>push</em>, value alamat di
+<code>sp</code> akan dikurangi), makanya kita ambil posisi kita di atas alamat instruksi
+pertama, biar tidak tiba-tiba menimpa instruksi selanjutnya.</p></div>
+<h4 id="clear-bss">Clear .bss<a class="heading-anchor" aria-label="Link to section" href="#clear-bss">#</a></h4>
+<p>Ketiga, kita ingin meng-nol-kan segmen memori yang ditandai dengan <code>bss</code>. Segmen
+<code>bss</code> nantinya akan ditempati oleh variabel-variabel yang <em>statically
+allocated</em>, mirip seperti kita membuat variabel <code>static int my_value</code>. Jadi, ini
+untuk memastikan bahwa variable static kita value-nya 0.</p>
+<div class="callout callout-hint" data-callout="hint"><p>“Segmen memori” disini sama saja dengan segmen program kita, karena nanti
+semua program kita akan ditaruh ke memori dalam proses <em>booting</em>.</p></div>
+<h4 id="jump-to-main-function">Jump to main function<a class="heading-anchor" aria-label="Link to section" href="#jump-to-main-function">#</a></h4>
+<p>Terakhir, kita akan <em>jump</em> ke alamat yang ditandai <code>kernel_main</code>, yang nanti
+kita akan implementasi.</p>
+<p>Dari assembly di atas, ada beberapa symbol: <code>_start</code>, <code>__bss_start</code>,
+<code>__bss_size</code>, <code>kernel_main</code>. Pada saat <code>linking process</code> nantinya, baru symbol
+ini akan di-resolve dan diganti ke value yang sebenarnya.</p>
+<p>Karena compilation Rust hanya melihat file yang di-”depend” oleh <code>main.rs</code>, maka
+kita buat source file baru <code>rs</code> bernama <code>boot.rs</code> yang isinya:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">arch</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">global_asm!</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">include_str!</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"boot.S"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">));</span></span></code></pre></div>
+<h3 id="main-function">Main Function<a class="heading-anchor" aria-label="Link to section" href="#main-function">#</a></h3>
+<p>Kita akan membuat main “entry-point” kita yang menggunakan kode Rust. Ingat,
+program kita tidak akan bisa menggunakan library tambahan maupun syscall apapun,
+maka kita tidak bisa menggunakan library <code>std</code>, hanya <code>core</code> saja. Kita akan
+menambahkan <em>crate attribute</em> <code>no_std</code> dan <code>no_main</code> karena <em>main function</em> kita
+akan dipanggil oleh assembly di atas.</p>
+<p>File <code>main.rs</code> akan berisi sbb:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#![no_std]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#![no_main]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">mod</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> boot</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[no_mangle]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">extern</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "C"</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> kernel_main</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[panic_handler]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> on_panic</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(_info</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x26;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">panic</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">PanicInfo</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#D73A49;--shiki-dark:#F47067"> !</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  loop</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {}</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span></code></pre></div>
+<h4 id="external-linkage-dan-no_mangle">External Linkage dan no_mangle<a class="heading-anchor" aria-label="Link to section" href="#external-linkage-dan-no_mangle">#</a></h4>
+<p><code>no_mangle</code> dan <code>extern "C"</code> di atas sangat penting untuk memastikan fungsi
+<code>kernel_main</code> memiliki <em>external linkage</em> dan nama symbolnya tidak <em>mangled</em>
+(jadi tetap <code>kernel_main</code>, yang bisa dibaca oleh assembly yang kita buat di
+atas).</p>
+<div class="callout callout-hint" data-callout="hint"><p>Secara default, fungsi yang di-compile Rust akan melewati proses <em>name
+mangling</em>. Mudahnya, nama fungsi yang muncul setelah meng-compile
+<code>kernel_main()</code> tidak akan menjadi <code>kernel_main</code>, tetapi seperti
+<code>_ZN5osdev10main14kernel_main17h6443fc27a975a06bE</code>. Source file lain yang ingin
+memanggil <code>kernel_main</code> harus menggunakan nama/symbol hasil <em>mangling</em>, atau
+melewati proses <a href="https://doc.rust-lang.org/rustc/symbol-mangling/index.html"><em>name
+mangling</em></a> yang
+sama, agar linker bisa me-”nyambungkan” dengan benar.</p></div>
+<h4 id="panic-handler">Panic Handler<a class="heading-anchor" aria-label="Link to section" href="#panic-handler">#</a></h4>
+<p>Rust sendiri memiliki <em>panic handler</em> yang akan dipanggil apabila ada
+<em>unrecoverable error</em>. Sayangnya, fitur ini tidak bisa langsung kita pakai. Kita
+akan mematikan <em>default panic handler</em> dan menggantinya di <code>main.rs</code> di fungsi
+yang ditandai <code>#[panic_handler]</code>.</p>
+<p>Tambahkan informasi berikut di <code>Cargo.toml</code>:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[profile</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">dev]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">panic </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "abort"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[profile</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">release]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">panic </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "abort"</span></span>
+<span class="line"></span></code></pre></div>
+<p>Penjelasannya bisa dilihat
+<a href="https://doc.rust-lang.org/nomicon/panic-handler.html">disini</a> dan
+<a href="https://doc.rust-lang.org/book/ch09-01-unrecoverable-errors-with-panic.html">disini</a>.</p>
+<h3 id="implementasi-gpio">Implementasi GPIO<a class="heading-anchor" aria-label="Link to section" href="#implementasi-gpio">#</a></h3>
+<p>Mulai dari sini, kita bisa ngoding “hampir sepenuhnya” dalam Rust. Untuk
+mengoperasikan GPIO kita harus:</p>
+<ul>
+<li>Memahami cara mengakses register yang mengontrol pin GPIO tersebut</li>
+<li>Memahami berada di region memory mana register tersebut berada.</li>
+</ul>
+<p>Dari halaman 6 dari datasheet,</p>
+<blockquote>
+<p>Physical addresses range from 0x3F000000 to 0x3FFFFFFF for peripherals. The
+bus addresses for peripherals are set up to map onto the peripheral bus address
+range starting at 0x7E000000. Thus a peripheral advertised here at bus address
+0x7Ennnnnn is available at physical address 0x3Fnnnnnn.</p>
+</blockquote>
+<p>Dari kalimat pertama, kita dapat mengetahui <em>base address</em> dari peripheral
+dimulai dari <code>0x3F000000</code>.</p>
+<div class="callout callout-warning" data-callout="warning"><p>Semua address yang ditunjukkan di dalam datasheet ditulis dalam format “bus
+address” (alamat yang dipahami oleh VideoCore), jadi kita perlu berhati-hati
+karena kita bekerja dalam CPU, bukan GPU. Contoh, register <code>GPSET0</code> ada di
+alamat <code>0x7E20001C</code>, maka dalam CPU sebenarnya alamat tersebut adalah
+<code>0x3F20001C</code>.</p></div>
+<h4 id="mmio">MMIO<a class="heading-anchor" aria-label="Link to section" href="#mmio">#</a></h4>
+<p>Kita akan mempersiapkan interface untuk menulis data ke dalam memori segmen
+peripheral. Kita namakan MMIO (Memory mapped IO) karena CPU mengakses peripheral
+melalui interface memori.</p>
+<p>File <code>mmio.rs</code> berisi sbb:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Each model has different base addresses.</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> BASE_ADDR</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x3F000000</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[inline(always)]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(addr</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, data</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#6F42C1;--shiki-dark:#F69D50">core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">ptr</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write_volatile</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE_ADDR</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> addr) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#D73A49;--shiki-dark:#F47067"> *mut</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, data) }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[inline(always)]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> read</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(addr</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#6F42C1;--shiki-dark:#F69D50">core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">ptr</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">read_volatile</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE_ADDR</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> addr) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#D73A49;--shiki-dark:#F47067"> *mut</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p><code>write_volatile</code> dan <code>read_volatile</code> disini sangat penting untuk menghindari
+<em>optimization</em> yang bisa dilakukan oleh compiler. Karena value di dalam bagian
+memori tersebut tidak sepenuhnya dikontrol oleh program kita, maka compiler
+tidak boleh melakukan asumsi apapun terhadap pointer tersebut.</p>
+<h4 id="kontrol-gpio">Kontrol GPIO<a class="heading-anchor" aria-label="Link to section" href="#kontrol-gpio">#</a></h4>
+<p>Untuk mengontrol GPIO, kita harus mengubah mode GPIO tersebut menjadi mode
+<em>output</em>, baru kita bisa menyalakan output tersebut.</p>
+<p>Mengacu ke halaman 90, ada 3 jenis register yang harus kita kontrol:</p>
+<ul>
+<li><code>GPFSEL</code>: Mengatur mode GPIO. Kita akan mengubah mode GPIO menjadi mode output.</li>
+<li><code>GPSET</code>: Menyalakan GPIO output.</li>
+<li><code>GPCLR</code>: Mematikan GPIO output.</li>
+</ul>
+<p>Untuk penjelasan <code>GPSET</code> dan <code>GPCLR</code> sepertinya sudah cukup jelas dalam
+datasheet. Untuk <code>GPFSEL</code>, yang perlu diperhatikan adalah setiap GPIO diwakili oleh 3 bit.</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">use</span><span style="color:#D73A49;--shiki-dark:#F47067"> crate::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">io</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#24292E;--shiki-dark:#ADBAC7">mmio;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Number of GPIOs</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> NUM_GPIOS</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 54</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Registers</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">struct</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[allow(dead_code)]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">impl</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> BASE</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">      =</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x0020_00_00</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL0</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x00</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 0</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL1</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x04</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL2</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x08</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 2</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL3</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x0C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 3</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL4</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 4</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL5</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">   =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x14</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Function Select 5</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Each register represents floor(32bit / 3bit) = 10 GPIOs</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // bit 30-31 is reserved</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPFSEL_BANK</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [</span><span style="color:#6F42C1;--shiki-dark:#F69D50">u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">6</span><span style="color:#24292E;--shiki-dark:#ADBAC7">] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL2</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">                                 Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL3</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL5</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPSET0</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">    =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x1C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Pin Output Set 0</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPSET1</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">    =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x20</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Pin Output Set 1</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPCLR0</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">    =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x28</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Pin Output Clear 0</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> GPCLR1</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#D73A49;--shiki-dark:#F47067">    =</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">BASE</span><span style="color:#D73A49;--shiki-dark:#F47067"> +</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x2C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6A737D;--shiki-dark:#768390">// GPIO Pin Output Clear 1</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[allow(dead_code)]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> enum</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Function</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Input</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Output</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func2</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func3</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  Func5</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Set function of GPIOs in which position the bit is set.</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// For example, set_function(1 &#x3C;&#x3C; 5 | 1 &#x3C;&#x3C; 10, Function::Output)</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// sets GPIO5 and GPIO10 as output.</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> set_function</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, function</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Function</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">  assert!</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">NUM_GPIOS</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL_BANK</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">len</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Make sure only 0..53 are set</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> NUM_GPIOS</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> function_bits</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    match</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> function {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Input</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b000</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Output</span><span style="color:#D73A49;--shiki-dark:#F47067"> =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b001</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func0</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b100</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func1</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b101</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func2</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b110</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func3</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b111</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func4</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b011</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">      Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Func5</span><span style="color:#D73A49;--shiki-dark:#F47067">  =></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0b010</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  };</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#D73A49;--shiki-dark:#F47067"> mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpfsel_val</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [</span><span style="color:#6F42C1;--shiki-dark:#F69D50">u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL_BANK</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">len</span><span style="color:#24292E;--shiki-dark:#ADBAC7">()] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    [</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL_BANK</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">len</span><span style="color:#24292E;--shiki-dark:#ADBAC7">()];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (idx, reg) </span><span style="color:#D73A49;--shiki-dark:#F47067">in</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL_BANK</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">iter</span><span style="color:#24292E;--shiki-dark:#ADBAC7">()</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">enumerate</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    gpfsel_val[idx] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">read</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7">reg);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">in</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#D73A49;--shiki-dark:#F47067">..</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">NUM_GPIOS</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i) </span><span style="color:#D73A49;--shiki-dark:#F47067">!=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">      // Where to place the function bit</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">      let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> shift </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (i </span><span style="color:#D73A49;--shiki-dark:#F47067">%</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 3</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">      let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> bank_idx </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">/</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">      // zero out the bits first</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      gpfsel_val[bank_idx </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">] </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;=</span><span style="color:#D73A49;--shiki-dark:#F47067"> !</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0b111</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> shift) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      gpfsel_val[bank_idx </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">] </span><span style="color:#D73A49;--shiki-dark:#F47067">|=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (function_bits </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> shift;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (reg, val) </span><span style="color:#D73A49;--shiki-dark:#F47067">in</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">iter</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">zip</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPFSEL_BANK</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, gpfsel_val) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(reg, val);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Set the output of GPIO in which position the bit is set.</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// For example, output_set(1 &#x3C;&#x3C; 5 | 1 &#x3C;&#x3C; 10) sets GPIO 5, and 10.</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> output_set</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Make sure only 0..53 is set</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> NUM_GPIOS</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios_0</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios_1</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPSET0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, gpios_0);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPSET1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, gpios_1);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Set the output of GPIO in which position the bit is set.</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// For example, output_set(1 &#x3C;&#x3C; 5 | 1 &#x3C;&#x3C; 10) clears GPIO 5, and 10.</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> output_clear</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Make sure only 0..53 is set</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ((</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> NUM_GPIOS</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios_0</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> gpios_1</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (gpios </span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPCLR0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, gpios_0);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  mmio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">write</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Reg</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">GPCLR1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, gpios_1);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Saya membuat fungsi diatas yang menerima 1 value <code>u64</code> yang mewakili 1 bit
+sebagai 1 GPIO. Contohnya, untuk mengontrol GPIO4, saya akan memasang value
+<code>0b10000</code> (GPIO dimulai dari 0).</p>
+<h4 id="sleep-function">“Sleep function”<a class="heading-anchor" aria-label="Link to section" href="#sleep-function">#</a></h4>
+<p>Karena kita ingin membuat <em>blinking LED</em>, maka kita perlu sesuatu untuk
+men-”delay” program kita berjalan. Kalau pemrograman biasa, biasanya kita sudah
+diberikan system call <code>sleep</code> yang di dalamnya sudah dibuat dengan cukup akurat
+menggunakan hardware timer dan interrupt. Dalam implementasi kita, belum ada
+yang bisa melakukan hal tersebut. Jadi untuk sekarang simplenya kita cukup
+membuat for loop yang menghitung 1 sampai N saja.</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Loop &#x3C;delay> times in a way that the compiler won't optimize away</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> sleep</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(count</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> i32</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  core</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">hint</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">black_box</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#D73A49;--shiki-dark:#F47067">|mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cnt</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> i32</span><span style="color:#D73A49;--shiki-dark:#F47067">|</span><span style="color:#D73A49;--shiki-dark:#F47067"> while</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cnt </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { cnt </span><span style="color:#D73A49;--shiki-dark:#F47067">-=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; } ) (count));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Kita perlu menghindari optimisasi compiler disini, karena compiler bisa saja
+melihat program kita sebenarnya tidak melakukan apa-apa (hanya loop tanpa
+hasil), kemudian meng-skip kode tersebut Rust menyediakan fungsi <code>black_box</code>
+untuk membuat compiler-nya tidak melakukan optimisasi appun.</p>
+<h3 id="menyusun-yang-sudah-dibangun">Menyusun yang sudah dibangun<a class="heading-anchor" aria-label="Link to section" href="#menyusun-yang-sudah-dibangun">#</a></h3>
+<p>Kita sudah melengkapi apa yang dibutuhkan untuk <em>blinking LED</em>. Sekarang kita
+tinggal menyusunnya di main function yang kita buat sebelumnya.</p>
+<p>Untuk percobaan kali ini, saya akan menghubungkan GPIO4 dengan LED. Saya
+menggunakan GPIO Extension Board agar lebih mudah koneksinya.</p>
+<p><img src="/assets/20241005-id-raspi-bare-metal-rust/img/gpio.jpeg" alt="Desktop View"></p>
+<div class="callout callout-warning" data-callout="warning"><p>Jika ingin menggunakan GPIO lain, perlu diketahui dalam Raspberry Pi ada 2
+sistem penomoran GPIO yang berbeda: BCM dan GPIO. Yang dipahami oleh SoC adalah
+penomoran BCM. Sebagai contoh, di website <a href="https://pinout.xyz">pinout.xyz</a>
+tulisan “GPIO X” yang diwarnai putih, X-nya menggunakan penomoran BCM</p></div>
+<p>Kemudian, pada file <code>main.rs</code>, kita akan menaruh logic-nya:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[no_mangle]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">extern</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "C"</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> kernel_main</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  gpio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">set_function</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">gpio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Function</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Output</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  loop</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    gpio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">output_set</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    synchronization</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">sleep</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">500_000</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    gpio</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">output_clear</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    synchronization</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">sleep</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">500_000</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Logic di atas cukup simple berkat bantuan interface yang kita buat. Pertama,
+kita mengubah mode GPIO4 menjadi mode output, kemudian kita nyalakan dan matikan
+output tersebut dengan jeda menggunakan <code>delay(500_000)</code>.</p>
+<h2 id="build">Build<a class="heading-anchor" aria-label="Link to section" href="#build">#</a></h2>
+<p>Untuk build project ini, tidak bisa langsung menjalankan <code>cargo build</code> karena
+kita akan build untuk hardware tanpa OS apapun (bare metal). Kita perlu
+menentukan sendiri struktur binary program kita. Sebelumnya kita menyinggung
+linking process di beberapa bagian, sekarang kita akan mengatur <em>linking process</em> tersebut.</p>
+<h3 id="linking">Linking<a class="heading-anchor" aria-label="Link to section" href="#linking">#</a></h3>
+<p>Sebenarnya yang terjadi dalam hasil kompilasi, biasanya source file akan
+dikompilasi menjadi <em>object file</em>. <em>Object file</em> belum tentu bisa dijalankan,
+karena bisa saja ada symbol yang belum di-resolve. Sebagai contoh, di atas kita
+membuat <code>boot.S</code> yang berisi instruksi untuk jump ke address yang dilabeli
+<code>kernel_main</code>. <code>boot.S</code> sendiri belum tahu apa maksud dari <code>kernel_main</code>, dan
+<code>main.rs</code> hanya membuat fungsi <code>kernel_main</code> tanpa tahu siapa  yang
+menggunakannya. <em>Linking process</em> inilah yang menghubungkan symbol <code>kernel_main</code>
+tersebut.</p>
+<p>Linker juga bertanggung jawab mengatur isi struktur program binary akhir kita, seperti
+mengatur section <code>.text.boot</code> harus berada di paling atas (ini penting agar CPU bisa eksekusi),
+dan section sisanya berada di bawahnya.</p>
+<p>Perlu diketahui juga bahwa CPU Raspberry Pi mengeksekusi instruksi pertama pada
+alamat memory <code>0x8000</code> (untuk 32-bit), atau <code>0x80000</code> untuk (64-bit). Lebih
+lengkapnya bisa dilihat di <a href="https://raspberrypi.stackexchange.com/questions/10442/what-is-the-boot-sequence">post Stack Overflow
+berikut</a>.</p>
+<p>Berikut adalah linker script yang akan kita pakai, kita namakan
+<code>aarch64-raspi3b.ld</code>.</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>ENTRY(_start)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>SECTIONS</span></span>
+<span class="line"><span>{</span></span>
+<span class="line"><span>    /* Starts at LOADER_ADDR. */</span></span>
+<span class="line"><span>    . = 0x80000;</span></span>
+<span class="line"><span>    /* For arm32, use . = 0x8000; */</span></span>
+<span class="line"><span>    __start = .;</span></span>
+<span class="line"><span>    __text_start = .;</span></span>
+<span class="line"><span>    .text :</span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        KEEP(*(.text.boot))</span></span>
+<span class="line"><span>        *(.text*)</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    . = ALIGN(4096); /* align to page size */</span></span>
+<span class="line"><span>    __text_end = .;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    __rodata_start = .;</span></span>
+<span class="line"><span>    .rodata :</span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        *(.rodata*)</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    . = ALIGN(4096); /* align to page size */</span></span>
+<span class="line"><span>    __rodata_end = .;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    __data_start = .;</span></span>
+<span class="line"><span>    .data :</span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        *(.data*)</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    . = ALIGN(4096); /* align to page size */</span></span>
+<span class="line"><span>    __data_end = .;</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>    __bss_start = .;</span></span>
+<span class="line"><span>    .bss :</span></span>
+<span class="line"><span>    {</span></span>
+<span class="line"><span>        bss = .;</span></span>
+<span class="line"><span>        *(.bss*)</span></span>
+<span class="line"><span>    }</span></span>
+<span class="line"><span>    . = ALIGN(4096); /* align to page size */</span></span>
+<span class="line"><span>    __bss_end = .;</span></span>
+<span class="line"><span>    __bss_size = __bss_end - __bss_start;</span></span>
+<span class="line"><span>    __end = .;</span></span>
+<span class="line"><span>}</span></span></code></pre></div>
+<p>Script di atas diambil dari Wiki OSDev, dan disana ada <a href="https://wiki.osdev.org/Raspberry_Pi_Bare_Bones#Linking_the_Kernel">penjelasan lebih
+detail</a>
+tentang setiap perintahnya. Intinya, section <code>.text.boot</code> akan ditaruh tepat di
+alamat <code>0x80000</code> dan sisanya akan mengikuti, termasuk alamat variabel dan
+function akan ditaruh setelah <code>0x80000</code>.</p>
+<h3 id="cross-compile">Cross Compile<a class="heading-anchor" aria-label="Link to section" href="#cross-compile">#</a></h3>
+<p>Semua sudah siap, sekarang kita hanya tinggal compile. Sayangnya, kita harus
+melakukan step khusus untuk compile, karena target hardware kita bukan komputer
+kita sendiri, melainkan sebuah sistem AArch64 yang berjalan tanpa OS (bare
+metal). Kita harus mengubah target kita ke <code>aarch64-unknown-none</code> (Platform
+AArch64 dengan vendor <code>unknown</code> dan OS <code>none</code>).</p>
+<p>Siapkan toolchain yang dibutuhkan untuk cross compile ke target berikut:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">rustup</span><span style="color:#032F62;--shiki-dark:#96D0FF"> target</span><span style="color:#032F62;--shiki-dark:#96D0FF"> add</span><span style="color:#032F62;--shiki-dark:#96D0FF"> aarch64-unknown-none</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">cargo</span><span style="color:#032F62;--shiki-dark:#96D0FF"> install</span><span style="color:#032F62;--shiki-dark:#96D0FF"> cargo-binutils</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">rustup</span><span style="color:#032F62;--shiki-dark:#96D0FF"> component</span><span style="color:#032F62;--shiki-dark:#96D0FF"> add</span><span style="color:#032F62;--shiki-dark:#96D0FF"> llvm-tools</span></span></code></pre></div>
+<p>Kemudian, buat file <code>.cargo/config.toml</code> dan sisipkan konfigurasi berikut:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>[build]</span></span>
+<span class="line"><span>target = "aarch64-unknown-none"</span></span>
+<span class="line"><span>rustflags = ["-C", "link-arg=-Tsrc/aarch64-raspi3b.ld"]</span></span></code></pre></div>
+<p>Konfigurasi di atas memastikan bahwa compile akan dilakukan ke target
+<code>aarch64-unknown-none</code> dengan linker script <code>src/aarch64-raspi3b.ld</code>. Silakan
+ubah file linker scriptnya apabila berbeda.</p>
+<p>Semua sudah lengkap, tinggal dijalankan saja build seperti biasa:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cargo build</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Compiling</span><span style="color:#032F62;--shiki-dark:#96D0FF"> osdev</span><span style="color:#032F62;--shiki-dark:#96D0FF"> v0.0.1</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (/Users/firmanhp/Code/firmanhp.github.io/references/2024-10-04-osdev)</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Finished</span><span style="color:#032F62;--shiki-dark:#96D0FF"> `</span><span style="color:#6F42C1;--shiki-dark:#F69D50">dev</span><span style="color:#032F62;--shiki-dark:#96D0FF">`</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> profile</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [unoptimized </span><span style="color:#032F62;--shiki-dark:#96D0FF">+</span><span style="color:#032F62;--shiki-dark:#96D0FF"> debuginfo]</span><span style="color:#032F62;--shiki-dark:#96D0FF"> target</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">s</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#032F62;--shiki-dark:#96D0FF">in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 1.72s</span></span></code></pre></div>
+<p>Hasil kompilasi akan berbentuk ELF format yang belum langsung bisa dijalankan di
+mesin.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">file</span><span style="color:#032F62;--shiki-dark:#96D0FF"> target/aarch64-unknown-none/debug/osdev</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">target/aarch64-unknown-none/debug/osdev:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ELF</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 64-bit</span><span style="color:#032F62;--shiki-dark:#96D0FF"> LSB</span><span style="color:#032F62;--shiki-dark:#96D0FF"> executable,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ARM</span><span style="color:#032F62;--shiki-dark:#96D0FF"> aarch64,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> version</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (SYSV), statically linked, with debug_info, not stripped</span></span></code></pre></div>
+<p>ELF sendiri bisa dibilang sebagai format binary dengan tambahan metadata. Untuk
+menghapus metadata agar isi binary-nya hanya instruksi dan data saja, kita bisa
+menggunakan <code>objcopy</code>.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cargo objcopy -- -O binary osdev.img</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> file osdev.img</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">osdev.img:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> data</span></span></code></pre></div>
+<h2 id="verifikasisanity-check">Verifikasi/Sanity check<a class="heading-anchor" aria-label="Link to section" href="#verifikasisanity-check">#</a></h2>
+<p>Debugging bare metal program tidaklah mudah karena kita tidak ada feedback yang
+jelas, karena kitapun belum implementasi sistem serial maupun display yang bisa
+menampilkan sesuatu.</p>
+<p>Ada sedikit tips yang bisa digunakan untuk memastikan apakah binary akan
+berjalan dengan benar atau bukan, kita bisa melakukan sedikit inspeksi pada ELF
+file yang baru kita buat menggunakan <code>objdump</code>. Karena binary hasil kompilasi
+Rust cukup besar untuk source yang kecil ini (karena <em>somehow</em> ada data yang
+dipakai mungkin untuk exception handling?), kita taruh saja hasil outputnya ke
+dalam file.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">objdump</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -dt</span><span style="color:#032F62;--shiki-dark:#96D0FF"> target/aarch64-unknown-none/debug/osdev</span><span style="color:#D73A49;--shiki-dark:#F47067"> ></span><span style="color:#032F62;--shiki-dark:#96D0FF"> objdump_out</span></span></code></pre></div>
+<p>Jika dilihat hasil outputnya, harusnya symbol <code>_start</code> kita berada di alamat
+<code>0x80000</code> seperti berikut:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>Disassembly of section .text:</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>0000000000080000 &#x3C;_start>:</span></span>
+<span class="line"><span>   80000: d53800a1     	mrs	x1, MPIDR_EL1</span></span>
+<span class="line"><span>   80004: 92400421     	and	x1, x1, #0x3</span></span>
+<span class="line"><span>   80008: b4000041     	cbz	x1, 0x80010 &#x3C;_start+0x10></span></span>
+<span class="line"><span>   8000c: 1400000a     	b	0x80034 &#x3C;halt></span></span>
+<span class="line"><span>   80010: 58000185     	ldr	x5, 0x80040 &#x3C;$d.2></span></span>
+<span class="line"><span>   80014: 910000bf     	mov	sp, x5</span></span>
+<span class="line"><span>   80018: 58000185     	ldr	x5, 0x80048 &#x3C;$d.2+0x8></span></span>
+<span class="line"><span>   8001c: 180001a6     	ldr	w6, 0x80050 &#x3C;$d.2+0x10></span></span>
+<span class="line"><span>   80020: 34000086     	cbz	w6, 0x80030 &#x3C;_start+0x30></span></span>
+<span class="line"><span>   80024: f80084bf     	str	xzr, [x5], #8</span></span>
+<span class="line"><span>   80028: 510004c6     	sub	w6, w6, #1</span></span>
+<span class="line"><span>   8002c: 35ffffa6     	cbnz	w6, 0x80020 &#x3C;_start+0x20></span></span>
+<span class="line"><span>   80030: 94000460     	bl	0x811b0 &#x3C;kernel_main></span></span>
+<span class="line"><span>...</span></span></code></pre></div>
+<p>Kita bisa lihat juga instruksi di dalamnya yang sama seperti isi kode <code>boot.S</code>
+kita. Artinya, kita cukup yakin bahwa di atas akan menjadi instruksi pertama
+yang dieksekusi oleh CPU kita. Apabila alamat <code>0x80000</code> diisi data yang lain,
+artinya hasil kompilasi kita tidak benar.</p>
+<p>Dari hasil tersebut kita juga bisa lihat hasil <em>name mangling</em> Rust, dan section
+yang kita singgung di dalam linker script kita: <code>.rodata</code>, <code>.data</code>, <code>.bss</code>.</p>
+<h2 id="menjalankan-di-mesin">Menjalankan di Mesin<a class="heading-anchor" aria-label="Link to section" href="#menjalankan-di-mesin">#</a></h2>
+<p>Misalkan binary (tanpa metadata ELF) kita bernama <code>osdev.img</code>, kita akan
+pindahkan file tersebut ke SD Card mesin kita. Asumsi kita sudah pernah
+menginstall Linux sebelumnya ke dalam SD Card tersebut, kita cukup mengganti
+file <code>kernel8.img</code> di dalam partisi <code>bootfs</code>, atau tetap menggunakan nama
+<code>osdev.img</code>, dan mengatur <code>config.txt</code> dan menambahkan konfigurasi berikut:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span># For more options and information see</span></span>
+<span class="line"><span># http://rptl.io/configtxt</span></span>
+<span class="line"><span># Some settings may impact device functionality. See link above for details</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>kernel=osdev.img</span></span></code></pre></div>
+<p>Eject SD cardnya, masukkan ke Raspberry Pi, dan nyalakan!</p>
+<figure class="post-figure"><img src="/assets/20241005-id-raspi-bare-metal-rust/img/blinking.gif" alt="Desktop View"><figcaption class="image-caption">
+LED blinking!</figcaption></figure>
+<h2 id="conclusion">Conclusion<a class="heading-anchor" aria-label="Link to section" href="#conclusion">#</a></h2>
+<p>Sampel source code bisa dilihat
+<a href="https://github.com/firmanhp/firmanhp.github.io/tree/main/references/2024-10-04-osdev">disini</a>.</p>
+<p>Kita baru saja membuat program yang berjalan di atas bare metal Raspberry Pi.
+Cara di atas bisa saja diadaptasi untuk platform yang lain, tentunya dengan
+memahami hardware yang dituju.</p>
+<p>Selanjutnya mungkin bisa dikembangkan lagi menjadi operating system yang
+sesungguhnya (bisa menjalankan process, mengakses filesystem, menggunakan
+keyboard/mouse, dll), tentunya <em>step-by-step</em>. Dari sini kita jadi memahami
+bahwa operating system adalah project yang sangat besar dan memakan waktu yang
+lama, dan perlu kerjasama dari banyak orang, terutama vendor untuk
+mengimplementasikan driver hardware mereka.</p>
+<h2 id="referensi">Referensi<a class="heading-anchor" aria-label="Link to section" href="#referensi">#</a></h2>
+<ul>
+<li><a href="https://wiki.osdev.org/Raspberry_Pi_Bare_Bones">OSDev Wiki Raspberry Pi Bare
+Bones</a></li>
+<li><a href="https://github.com/raspberrypi/documentation/issues/325#issuecomment-379651504">BCM2837 datasheet + errata
+PDF</a></li>
+<li><a href="https://www.raspberrypi.com/products/raspberry-pi-3-model-b/">Raspberry Pi 3 Model
+B</a></li>
+<li><a href="https://raspberrypi.stackexchange.com/questions/10442/what-is-the-boot-sequence">What is the boot sequence?</a></li>
+</ul> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#intro" data-toc-link="intro" data-astro-cid-xvrfupwn>Intro</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#persiapan" data-toc-link="persiapan" data-astro-cid-xvrfupwn>Persiapan</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#target" data-toc-link="target" data-astro-cid-xvrfupwn>Target</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#implementasi" data-toc-link="implementasi" data-astro-cid-xvrfupwn>Implementasi</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#entry-point" data-toc-link="entry-point" data-astro-cid-xvrfupwn>Entry point</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#main-function" data-toc-link="main-function" data-astro-cid-xvrfupwn>Main Function</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#implementasi-gpio" data-toc-link="implementasi-gpio" data-astro-cid-xvrfupwn>Implementasi GPIO</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#menyusun-yang-sudah-dibangun" data-toc-link="menyusun-yang-sudah-dibangun" data-astro-cid-xvrfupwn>Menyusun yang sudah dibangun</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#build" data-toc-link="build" data-astro-cid-xvrfupwn>Build</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#linking" data-toc-link="linking" data-astro-cid-xvrfupwn>Linking</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#cross-compile" data-toc-link="cross-compile" data-astro-cid-xvrfupwn>Cross Compile</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#verifikasisanity-check" data-toc-link="verifikasisanity-check" data-astro-cid-xvrfupwn>Verifikasi/Sanity check</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#menjalankan-di-mesin" data-toc-link="menjalankan-di-mesin" data-astro-cid-xvrfupwn>Menjalankan di Mesin</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#referensi" data-toc-link="referensi" data-astro-cid-xvrfupwn>Referensi</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

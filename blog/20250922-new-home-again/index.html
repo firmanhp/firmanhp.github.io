@@ -1,0 +1,117 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>New Home (Again)</title><meta name="description" content="Hello again, world!"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20250922-new-home-again" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>New Home (Again)</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2025-09-22T00:00:00.000Z" data-astro-cid-yvbahnfj>Sep 22, 2025</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a>  </div> </header>  <div class="post-prose" data-astro-cid-yvbahnfj> <figure class="post-figure"><img src="/assets/20250922-new-home-again/img/cat-emoji.svg" alt=""><figcaption class="image-caption">
+Meow</figcaption></figure>
+<h1 id="hello-again">Hello again!<a class="heading-anchor" aria-label="Link to section" href="#hello-again">#</a></h1>
+<p>It has been a year since I started this blog. To celebrate that, I am migrating the
+web platform into NextJS. The reason why is mainly because I just want to learn
+web development. This is also an opportunity to me to try vibe coding and I built
+this website using help from Claude.</p>
+<p>This website has still lots of issues, especially in mobile view (I don’t think
+it is actually functional LOL). I plan to tackle this step by step, and to add
+small projects into this website too!</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

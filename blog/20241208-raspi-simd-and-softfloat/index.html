@@ -1,0 +1,288 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project Log: SIMD, and -softfloat</title><meta name="description" content="Figuring out how a CPU \&#34;breaks\&#34; when executing a certain instruction"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20241208-raspi-simd-and-softfloat" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Project Log: SIMD, and -softfloat</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-12-08T13:30:00.000Z" data-astro-cid-yvbahnfj>Dec 8, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/systems-programming/" class="meta-tag" data-astro-cid-yvbahnfj>#systems-programming</a><a href="/blog/tags/rust/" class="meta-tag" data-astro-cid-yvbahnfj>#rust</a><a href="/blog/tags/qemu/" class="meta-tag" data-astro-cid-yvbahnfj>#qemu</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#debugging-session" data-toc-link="debugging-session" data-astro-cid-xvrfupwn>Debugging session</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#fixing" data-toc-link="fixing" data-astro-cid-xvrfupwn>Fixing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#does-it-run-on-the-actual-machine" data-toc-link="does-it-run-on-the-actual-machine" data-astro-cid-xvrfupwn>Does it run on the actual machine?</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>I’ve been trying to implement interrupts for my OSDev project. Every tutorials
+out there tells me that I need to construct my Interrupt Vector Table, then
+assign the address into <code>VBAR_EL1</code> register, then <a href="https://github.com/firmanhp/osdev/commit/96f9d5a645c250f3773ccfe84b8bca04d45443e2">you’re
+done</a>.
+Unfortunately, that was not as easy at it looks.</p>
+<p>I read the <code>VBAR_EL1</code> definition and it mentioned something around “to be taken
+on EL1”. This EL1 seems to be an exception level. I learned about privilege ring
+levels back in my college, and it seems to be the same thing as that, but for
+ARM. So I checked my exception level on QEMU, and it shows that I am already on
+EL3 (the top level), and the operating system is supposed to be running on EL1.</p>
+<p>From here, the next step would be: <em>how do we switch from EL3 into EL1?</em>.
+Fortunately, it was also covered in the Raspberry Pi OS tutorial by Sergey
+Matyukevich
+<a href="https://github.com/s-matyukevich/raspberry-pi-os/blob/master/src/lesson03/src/boot.S">here</a>.
+It is also present in the actual <a href="https://github.com/torvalds/linux/blob/master/arch/arm64/kernel/head.S#L257">linux kernel
+codebase</a>.
+The main idea is to:</p>
+<ol>
+<li>Configure the CPU control flags for EL1 through <code>SCTLR_EL1</code>, <code>SPSR_EL1</code></li>
+<li>Set up the return address (where we will start executing) in <code>ELR_EL3</code></li>
+<li>Call <code>ERET</code> (Exception Return) to “exit” from the exception, using the return
+address and restores the control flags.</li>
+</ol>
+<p>I tried <a href="https://github.com/firmanhp/osdev/commit/87f1ea3da217b1fa60ecec946d6c3ea5427fbf72">putting the
+code</a>,
+executing on QEMU, and…</p>
+<p>No output.</p>
+<p>What’s wrong???</p>
+<h2 id="debugging-session">Debugging session<a class="heading-anchor" aria-label="Link to section" href="#debugging-session">#</a></h2>
+<p>So I fired up gdb, and ran the instructions one by one. I found out that not all
+system registers can be printed by GDB for some reason, so I had to put some
+dummy operations. I put some <code>nop</code> instructions for my breakpoint, and dump the
+register I used to assign the system register value. For example, I want to
+check <code>CurrentEL</code></p>
+<div class="code-block" data-code-block="" data-language="asm"><div class="code-block-header"><span class="code-lang">asm</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy asm code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="asm"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">mrs x0, CurrentEL</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">nop</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> // for my breakpoint</span></span></code></pre></div>
+<p>Then I dump the <code>x0</code> register. Very obvious, but useful for me.</p>
+<p>For my newly added sequence, it seems to have no issues, the instruction
+proceeds one by one… Until the program counter pointed at some wacky value
+outside of my program. This always happen after it executed a certain
+instruction in my program.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">gdb</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#6F42C1;--shiki-dark:#F69D50">ni</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0xd503201f140003e0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ??</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ()</span></span></code></pre></div>
+<p>The value <code>0xd503201f140003e0</code> is actually my program counter, and it was
+obviously pointing somewhere that is outside of my memory (I am still using
+physical memory addressing). So I decided to take a look at the assembly.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000082e84</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17h3ecfd8b8af5fa566</span><span style="color:#24292E;--shiki-dark:#ADBAC7">E</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#032F62;--shiki-dark:#96D0FF">:</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">   ...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82eb0:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 14000001</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	b</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0x82eb4</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17h3ecfd8b8af5fa566E+0x3</span><span style="color:#D73A49;--shiki-dark:#F47067">0></span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82eb4:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 1400000c</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	b</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0x82ee4</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17h3ecfd8b8af5fa566E+0x6</span><span style="color:#D73A49;--shiki-dark:#F47067">0></span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82eb8:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> f94007e8</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	ldr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [sp, </span><span style="color:#6A737D;--shiki-dark:#768390">#0x8]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82ebc:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9e670100</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	fmov</span><span style="color:#032F62;--shiki-dark:#96D0FF">	d0,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82ec0:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 0e205800</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	cnt</span><span style="color:#032F62;--shiki-dark:#96D0FF">	v0.8b,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> v0.8b</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   82ec4:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 2e303800</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	uaddlv</span><span style="color:#032F62;--shiki-dark:#96D0FF">	h0,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> v0.8b</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">   ...</span></span></code></pre></div>
+<p>Well, I think I found the reason. It is executing <code>cnt	v0.8b, v0.8b</code> which
+involved SIMD registers. Previously this line of code worked when I did not
+switch from EL3 to EL1, so perhaps I missed some configuration to allow my CPU
+to execute SIMD operations on EL1.</p>
+<h2 id="fixing">Fixing<a class="heading-anchor" aria-label="Link to section" href="#fixing">#</a></h2>
+<p>There are two approaches to fix this.</p>
+<ul>
+<li>Make the CPU support running SIMD operations on EL1, or</li>
+<li>Force the compiler to not use SIMD operations on my bare metal programs.</li>
+</ul>
+<p>Which one to choose? The first option seems to be an obviously easy choice.
+<strong>Actually, it is not</strong>. If we were to involve other sets of registers to operate in
+our program, then we have to also be responsible to back these up when a context
+switch occurs. For example, when an interrupt happens, we are going to modify
+several registers to do some computations in our interrupt service routine, then
+we have to restore those registers back when we are returning from our
+interrupt. Those SIMD registers need to be backed up because we probably will
+use those during our interrupt service routine. Therefore, adding a new set of
+registers that we can work on, means that we also have to add those there.</p>
+<div class="callout callout-hint" data-callout="hint"><p>This is the
+<a href="https://github.com/firmanhp/osdev/commit/96f9d5a645c250f3773ccfe84b8bca04d45443e2#diff-af53155039e3a9943779ab9c62b54b42c509b9a69659616879de177f3932ce0fR62">code</a>
+where we back up, and restore our registers.</p></div>
+<p>Based on the above, then changing the compiler config seems to be much easier in
+terms of maintenance. Fortunately for us, we don’t have to recompile the core
+library (which needs a nightly Rust to do that). The rustc already supports
+<a href="https://doc.rust-lang.org/rustc/platform-support.html"><code>aarch64-unknown-none-softfloat</code></a>
+which means it will do a software emulation on floating point operations, and
+disables SIMD. You can see the build target dump here:</p>
+<div class="code-block" data-code-block="" data-language="json"><div class="code-block-header"><span class="code-lang">json</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy json code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="json"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">{</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "abi"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"softfloat"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "arch"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"aarch64"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "crt-objects-fallback"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"false"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "data-layout"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "disable-redzone"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">true</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "features"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"+v8a,+strict-align,-neon,-fp-armv8"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "is-builtin"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">true</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "linker"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"rust-lld"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "linker-flavor"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"gnu-lld"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "llvm-target"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"aarch64-unknown-none"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "max-atomic-width"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">128</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "metadata"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: {</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">    "description"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"Bare ARM64, softfloat"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">    "host_tools"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">false</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">    "std"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">false</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">    "tier"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">2</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  },</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "panic-strategy"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"abort"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "relocation-model"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"static"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "stack-probes"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: {</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">    "kind"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"inline"</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  },</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#8DDB8C">  "target-pointer-width"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"64"</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>As you can see, it disables the NEON (ARM’s SIMD) and <code>fp-armv8</code> feature, which
+is what we want. Checking back our assembly dump for the same symbol.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">00000000000864fc</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17ha8e5bab4712a4397</span><span style="color:#24292E;--shiki-dark:#ADBAC7">E</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#032F62;--shiki-dark:#96D0FF">:</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">   ...</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">   &#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">_ZN4core3ptr13read_volatile18precondition_check17ha8e5bab4712a4397E+0x34</span><span style="color:#24292E;--shiki-dark:#ADBAC7">></span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86528:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 14000001</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	b</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0x8652c</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17ha8e5bab4712a4397E+0x3</span><span style="color:#D73A49;--shiki-dark:#F47067">0></span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   8652c:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 14000013</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	b</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0x86578</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF">_ZN4core3ptr13read_volatile18precondition_check17ha8e5bab4712a4397E+0x7</span><span style="color:#24292E;--shiki-dark:#ADBAC7">c</span><span style="color:#D73A49;--shiki-dark:#F47067">></span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86530:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> f94007e8</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	ldr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [sp, </span><span style="color:#6A737D;--shiki-dark:#768390">#0x8]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86534:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> d341fd09</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	lsr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#6A737D;--shiki-dark:#768390"> #1</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86538:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9200f129</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	and</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0x5555555555555555</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   8653c:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> eb090109</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	subs</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86540:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9200e528</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	and</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0x3333333333333333</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86544:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> d342fd29</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	lsr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9,</span><span style="color:#6A737D;--shiki-dark:#768390"> #2</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86548:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9200e529</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	and</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0x3333333333333333</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   8654c:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 8b090108</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	add</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86550:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 8b481108</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	add</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> lsr</span><span style="color:#6A737D;--shiki-dark:#768390"> #4</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86554:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9200cd08</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	and</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0xf0f0f0f0f0f0f0f</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86558:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> b200c3e9</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	mov</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x9,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0x101010101010101  // =72340172838076673</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   8655c:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 9b097d08</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	mul</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x9</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86560:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> d378fd08</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	lsr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	x8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> x8,</span><span style="color:#6A737D;--shiki-dark:#768390"> #56</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86564:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> b9006fe8</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	str</span><span style="color:#032F62;--shiki-dark:#96D0FF">	w8,</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [sp, </span><span style="color:#6A737D;--shiki-dark:#768390">#0x6c]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   86568:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> b9406fe8</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	ldr</span><span style="color:#032F62;--shiki-dark:#96D0FF">	w8,</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [sp, </span><span style="color:#6A737D;--shiki-dark:#768390">#0x6c]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">   8656c:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 71000508</span><span style="color:#032F62;--shiki-dark:#96D0FF">     	subs</span><span style="color:#032F62;--shiki-dark:#96D0FF">	w8,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> w8,</span><span style="color:#6A737D;--shiki-dark:#768390"> #0x1</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">   ...</span></span></code></pre></div>
+<p>Now our code has no SIMD operations there, and now my code runs in EL1!</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">./qemu-test.sh</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Executing</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> level</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Kernel</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Timer</span><span style="color:#032F62;--shiki-dark:#96D0FF"> setup!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Hey,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> an</span><span style="color:#032F62;--shiki-dark:#96D0FF"> interrupt!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Timer</span><span style="color:#032F62;--shiki-dark:#96D0FF"> woo</span><span style="color:#032F62;--shiki-dark:#96D0FF"> woo!</span><span style="color:#032F62;--shiki-dark:#96D0FF"> do</span><span style="color:#032F62;--shiki-dark:#96D0FF"> it</span><span style="color:#032F62;--shiki-dark:#96D0FF"> again!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Timer</span><span style="color:#032F62;--shiki-dark:#96D0FF"> wait...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Hey,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> an</span><span style="color:#032F62;--shiki-dark:#96D0FF"> interrupt!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Second</span><span style="color:#032F62;--shiki-dark:#96D0FF"> timer,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> yay!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Timer</span><span style="color:#032F62;--shiki-dark:#96D0FF"> wait...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Timer</span><span style="color:#032F62;--shiki-dark:#96D0FF"> wait...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">QEMU:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Terminated</span></span></code></pre></div>
+<h2 id="does-it-run-on-the-actual-machine">Does it run on the actual machine?<a class="heading-anchor" aria-label="Link to section" href="#does-it-run-on-the-actual-machine">#</a></h2>
+<p>Unfortunately, no.. However, I found that my program tells me that the initial
+exception level is on EL2 (which I didn’t handle at this time of writing). The next
+step would be properly configuring from EL2 into EL1.</p>
+<div class="callout callout-hint" data-callout="hint"><p>All changes I’ve made can bee seen on this <a href="https://github.com/firmanhp/osdev/commits/main/?since=2024-11-29&#x26;until=2024-12-09">GitHub commit window</a>.</p></div>
+<p>See you next time!</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#debugging-session" data-toc-link="debugging-session" data-astro-cid-xvrfupwn>Debugging session</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#fixing" data-toc-link="fixing" data-astro-cid-xvrfupwn>Fixing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#does-it-run-on-the-actual-machine" data-toc-link="does-it-run-on-the-actual-machine" data-astro-cid-xvrfupwn>Does it run on the actual machine?</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

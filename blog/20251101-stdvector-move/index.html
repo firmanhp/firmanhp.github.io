@@ -1,0 +1,309 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>C++&#39;s std::vector may not use your move constructor</title><meta name="description" content="An insight I get from adding noexcept-s"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20251101-stdvector-move" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>C++&#39;s <code class="title-code">std::vector</code> may not use your move constructor</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2025-11-01T00:00:00.000Z" data-astro-cid-yvbahnfj>Nov 1, 2025</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a>  </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#vector-resizing" data-toc-link="vector-resizing" data-astro-cid-xvrfupwn>Vector resizing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#copying-is-likely-expensive" data-toc-link="copying-is-likely-expensive" data-astro-cid-xvrfupwn>Copying is likely expensive</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#why" data-toc-link="why" data-astro-cid-xvrfupwn>Why</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#solution" data-toc-link="solution" data-astro-cid-xvrfupwn>Solution</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#takeaways" data-toc-link="takeaways" data-astro-cid-xvrfupwn>Takeaways</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#references" data-toc-link="references" data-astro-cid-xvrfupwn>References</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <h2 id="vector-resizing">Vector resizing<a class="heading-anchor" aria-label="Link to section" href="#vector-resizing">#</a></h2>
+<p>We know that in C++, a dynamic array <code>std::vector</code> works by expanding its space
+when the number of elements exceeds its current capacity:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>std::vector&#x3C;uint8_t> vec;</span></span>
+<span class="line"><span>current memory visualization:</span></span>
+<span class="line"><span>idx:  [00][01][02][03]</span></span>
+<span class="line"><span>data:  0A  0B  0C  0D</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>When executing "vec.push_back(0x0E)":</span></span>
+<span class="line"><span>(1) Checks capacity (full) --> expand</span></span>
+<span class="line"><span>memory:</span></span>
+<span class="line"><span>idx:  [00][01][02][03]</span></span>
+<span class="line"><span>data:  0A  0B  0C  0D</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>new memory (xx = undefined):</span></span>
+<span class="line"><span>idx:  [00][01][02][03][04][05][06][07]</span></span>
+<span class="line"><span>data:  xx  xx  xx  xx  xx  xx  xx  xx</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>(2) Copy/move the old contents to new memory</span></span>
+<span class="line"><span>new memory (xx = undefined):</span></span>
+<span class="line"><span>idx:  [00][01][02][03][04][05][06][07]</span></span>
+<span class="line"><span>data:  0A  0B  0C  0D  xx  xx  xx  xx</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>(3) Free the old memory</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>(4) Insert the new member (0x0E):</span></span>
+<span class="line"><span>new memory (xx = undefined):</span></span>
+<span class="line"><span>idx:  [00][01][02][03][04][05][06][07]</span></span>
+<span class="line"><span>data:  0A  0B  0C  0D  0E  xx  xx  xx</span></span></code></pre></div>
+<h2 id="copying-is-likely-expensive">Copying is likely expensive<a class="heading-anchor" aria-label="Link to section" href="#copying-is-likely-expensive">#</a></h2>
+<p>If you have a non-trivial data structure which owns an allocated memory that you
+manage yourself, you probably really care about whether the resizing step inside
+the <code>std::vector</code> copies your data or moves your data.</p>
+<p>Here’s a toy example.</p>
+<p><a href="https://godbolt.org/z/bzcaqc8oE">Godbolt link</a></p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;vector></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;cstdint></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;cstring></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;algorithm></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;iostream></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">class MyString {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">public:</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // ctor</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> size) : </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(size), </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(new </span><span style="color:#D73A49;--shiki-dark:#F47067">uint8_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[size]) {}</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // dtor</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    ~</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() { delete</span><span style="color:#D73A49;--shiki-dark:#F47067">[]</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data_; }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Copy ctor</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> o) : </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(o.size_) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "copy ctor is used</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        std::memcpy</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_, o.data_, size_);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Copy assignment</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> operator</span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> o) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (this </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">o)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">            return</span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">this;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        delete</span><span style="color:#D73A49;--shiki-dark:#F47067">[]</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data_;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        size_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> o.size_;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> new </span><span style="color:#D73A49;--shiki-dark:#F47067">uint8_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[size_];</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        std::memcpy</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_, o.data_, size_);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        return</span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">this;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Move ctor</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> o) : </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(o.size_), </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(o.data_) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "move ctor is used</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        o.size_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        o.data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> nullptr;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Move assignment</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> operator</span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> o) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        std::swap</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(size_, o.size_);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        std::swap</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_, o.data_);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        return</span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">this;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">private:</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> size_;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    uint8_t*</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data_;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> main</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">void</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    constexpr </span><span style="color:#D73A49;--shiki-dark:#F47067">size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> SIZE </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 50</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    std::vector</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> my_data;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i</span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "-----emplace_back</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        my_data.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">emplace_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(SIZE);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "-----</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    return</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Even with move constructor defined like above, you will see that the
+<code>std::vector</code> resizes and copies the data, instead of moving:</p>
+<div class="code-block" data-code-block="" data-language="sh"><div class="code-block-header"><span class="code-lang">sh</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy sh code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="sh"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">copy</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ctor</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> used</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----emplace_back</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-----</span></span></code></pre></div>
+<h2 id="why">Why<a class="heading-anchor" aria-label="Link to section" href="#why">#</a></h2>
+<p>The reason is that in the standard, <code>std::vector::resize</code> needs to have a
+<a href="https://en.cppreference.com/w/cpp/container/vector/resize.html"><strong>strong exception safety
+guarantee</strong></a>.</p>
+<p>To put it simply, when an exception happened inside resizing step, this exception
+safety guarantees that the program must be in a proper state as if no resize has
+happened. If you allocate a new memory region and copy the data, rolling back is
+easy — you just destroy the data you copied, and deallocate that new memory.
+However, if you move the data and exception happened, then you are left with
+half-moved data, and you don’t know how to properly roll it back.</p>
+<h2 id="solution">Solution<a class="heading-anchor" aria-label="Link to section" href="#solution">#</a></h2>
+<p>If you are sure that your move constructor does not throw, provide <code>noexcept</code> keyword to them:</p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Move ctor</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">MyString</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(MyString</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> o</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) noexcept : </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(o.size_), </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(o.data_) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    std::cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "move ctor is used</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    o.size_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    o.data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> nullptr;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Then you can see it now uses the move constructor:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>move ctor is used</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>-----</span></span>
+<span class="line"><span>-----emplace_back</span></span>
+<span class="line"><span>-----</span></span></code></pre></div>
+<p>You can also add <code>noexcept</code> on other operations as long as they are actually not
+throwing errors.</p>
+<h2 id="takeaways">Takeaways<a class="heading-anchor" aria-label="Link to section" href="#takeaways">#</a></h2>
+<p>Rigorously declaring your function can help the compiler figure out the best
+optimization path. In this example, using <code>noexcept</code> gives opportunity to the
+optimization so they can use it without violating the C++ requirement.</p>
+<h2 id="references">References<a class="heading-anchor" aria-label="Link to section" href="#references">#</a></h2>
+<ul>
+<li><a href="https://en.cppreference.com/w/cpp/container/vector/resize.html">C++ Reference: std::vector::resize</a></li>
+<li><a href="https://en.cppreference.com/w/cpp/utility/move_if_noexcept.html">C++ Reference: std::move_if_noexcept</a></li>
+<li><a href="https://gcc.gnu.org/pipermail/libstdc++/2015-January/042381.html">GCC Mailing list: <code>std::vector&#x3C;T></code> does not use the move constructor of T to change its capacity</a></li>
+</ul> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#vector-resizing" data-toc-link="vector-resizing" data-astro-cid-xvrfupwn>Vector resizing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#copying-is-likely-expensive" data-toc-link="copying-is-likely-expensive" data-astro-cid-xvrfupwn>Copying is likely expensive</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#why" data-toc-link="why" data-astro-cid-xvrfupwn>Why</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#solution" data-toc-link="solution" data-astro-cid-xvrfupwn>Solution</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#takeaways" data-toc-link="takeaways" data-astro-cid-xvrfupwn>Takeaways</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#references" data-toc-link="references" data-astro-cid-xvrfupwn>References</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

@@ -1,0 +1,446 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Emulating Raspberry Pi OS using QEMU</title><meta name="description" content="Playing around with QEMU."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20240909-raspberry-pi-qemu" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Emulating Raspberry Pi OS using QEMU</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-09-08T15:00:00.000Z" data-astro-cid-yvbahnfj>Sep 8, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/raspberry-pi/" class="meta-tag" data-astro-cid-yvbahnfj>#raspberry-pi</a><a href="/blog/tags/qemu/" class="meta-tag" data-astro-cid-yvbahnfj>#qemu</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#preparing-the-files" data-toc-link="preparing-the-files" data-astro-cid-xvrfupwn>Preparing the files</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#os-version" data-toc-link="os-version" data-astro-cid-xvrfupwn>OS Version</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#mounting-the-boot-partition" data-toc-link="mounting-the-boot-partition" data-astro-cid-xvrfupwn>Mounting the boot partition</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#adding-credentials" data-toc-link="adding-credentials" data-astro-cid-xvrfupwn>Adding Credentials</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#pulling-device-tree-and-kernel-image" data-toc-link="pulling-device-tree-and-kernel-image" data-astro-cid-xvrfupwn>Pulling Device Tree and Kernel Image</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-sd-card-image" data-toc-link="the-sd-card-image" data-astro-cid-xvrfupwn>The “SD card” image</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#running-qemu" data-toc-link="running-qemu" data-astro-cid-xvrfupwn>Running QEMU</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#troubleshooting" data-toc-link="troubleshooting" data-astro-cid-xvrfupwn>Troubleshooting</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>Lately I am interested with <a href="https://www.qemu.org">QEMU</a>. QEMU is an open source software
+project which provides a virtualization and emulation with a lot of options (x86_64, ARM,
+PowerPC, etc). It also supports many kinds of host machines. Today I just want to try to
+emulate a Raspberry Pi machine using QEMU, just to know how QEMU works.</p>
+<div class="callout callout-hint" data-callout="hint"><p>This post is heavily based on <a href="https://interrupt.memfault.com/blog/emulating-raspberry-pi-in-qemu">interrupt.memfault.com post of the same topic</a>,
+with addition of my experiments.</p></div>
+<div class="callout callout-warning" data-callout="warning"><p>These commands were run on a MacOS running on an M3 chip. Commands and outputs may differ on
+different platforms.</p></div>
+<p>In this post, we explore on how to emulate a Raspberry Pi 4 Model B machine using QEMU.</p>
+<h2 id="preparing-the-files">Preparing the files<a class="heading-anchor" aria-label="Link to section" href="#preparing-the-files">#</a></h2>
+<h3 id="os-version">OS Version<a class="heading-anchor" aria-label="Link to section" href="#os-version">#</a></h3>
+<p>Assuming that we (obviously) have installed the QEMU package, which on Mac can be installed
+through <code>brew</code>, we need the Raspberry Pi image from the website, currently they provide 2
+versions on the <a href="https://www.raspberrypi.com/software/operating-systems/">website</a>:</p>
+<ul>
+<li>“Raspberry Pi OS” which is based on Debian 12 (<code>bookworm</code>) Linux distro.</li>
+<li>“Raspberry Pi OS (Legacy)” which is based on Debian 11 (<code>bullseye</code>) distro.</li>
+</ul>
+<p><strong>I had some issues when using the latest distro <code>bookworm</code></strong>, so I’m using the legacy version,
+which is based on <code>bullseye</code>. I picked up the Lite version, since I only want to run the
+CLI applications. Raspberry Pi 4 has a 64-bit processor so we download the 64-bit variant.</p>
+<h3 id="mounting-the-boot-partition">Mounting the boot partition<a class="heading-anchor" aria-label="Link to section" href="#mounting-the-boot-partition">#</a></h3>
+<p>We need to modify and pull out some files from the boot partition from the downloaded image.
+On Mac, <code>fdisk</code> shows it can properly read the partitions inside the disk image:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> fdisk 2024-07-04-raspios-bullseye-arm64-lite.img</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Disk:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 2024-07-04-raspios-bullseye-arm64-lite.img</span><span style="color:#032F62;--shiki-dark:#96D0FF">        geometry:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 1019/64/63</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [4112384 </span><span style="color:#032F62;--shiki-dark:#96D0FF">sectors]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Signature:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0xAA55</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">         Starting</span><span style="color:#032F62;--shiki-dark:#96D0FF">       Ending</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390"> #: id  cyl  hd sec -  cyl  hd sec [     start -       size]</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">------------------------------------------------------------------------</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50"> 1:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 0C</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   64</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1023</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   3</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [      </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">8192</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#032F62;--shiki-dark:#96D0FF">     524288]</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Win95</span><span style="color:#032F62;--shiki-dark:#96D0FF"> FAT32L</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50"> 2:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 83</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1023</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   3</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  32</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1023</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   3</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [    </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">532480</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#032F62;--shiki-dark:#96D0FF">    3579904]</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> files</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50"> 3:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 00</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [         </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#032F62;--shiki-dark:#96D0FF">          0]</span><span style="color:#032F62;--shiki-dark:#96D0FF"> unused</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50"> 4:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 00</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [         </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#032F62;--shiki-dark:#96D0FF">          0]</span><span style="color:#032F62;--shiki-dark:#96D0FF"> unused</span></span></code></pre></div>
+<p>What we are interested in is the first partition with <code>Win95 FAT32L</code> filesystem. The second
+partition is the root filesystem for the Linux OS which we will use later. We need to mount
+the partition with read/write access. Luckily on Mac, we can simply mount the image using
+<code>hdiutil</code>:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> hdiutil attach 2024-07-04-raspios-bullseye-arm64-lite.img</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/disk5</span><span style="color:#032F62;--shiki-dark:#96D0FF">              FDisk_partition_scheme</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/disk5s1</span><span style="color:#032F62;--shiki-dark:#96D0FF">            Windows_FAT_32</span><span style="color:#032F62;--shiki-dark:#96D0FF">                  /Volumes/bootfs</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/disk5s2</span><span style="color:#032F62;--shiki-dark:#96D0FF">            Linux</span></span></code></pre></div>
+<p>We can see that the boot partition is successfully attached to <code>/Volumes/bootfs</code>. This means
+we can access the file through the Finder. Once we are done with it later, we can eject using
+Finder, or running <code>hditil detach /Volumes/bootfs</code>.</p>
+<h3 id="adding-credentials">Adding Credentials<a class="heading-anchor" aria-label="Link to section" href="#adding-credentials">#</a></h3>
+<p>From 2022, Raspberry Pi stopped using <code>pi:raspberry</code> as their default credentials <a href="https://www.raspberrypi.com/news/raspberry-pi-bullseye-update-april-2022/">(post)</a>.
+They said that during the first boot, you will be asked for a set of username and password
+to be used. However, in this emulation session, we will not be asked that thing since we will
+manually boot the kernel. The Raspberry Pi provided us a way to manually add them, as explained
+in the “Headless setup” part. We are going add it this way.</p>
+<p>We need to create a file names <code>userconf.txt</code> inside of the boot partition. From the post, the
+file should contain a single line of text consisting of <code>username:password_encrypted</code>. To generate
+the encypted password, we need to use <code>openssl passwd -6</code>. In our case, we just want the default
+credential <code>pi:raspberry</code>:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cd /Volumes/bootfs</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> echo -n </span><span style="color:#032F62;--shiki-dark:#96D0FF">"pi:"</span><span style="color:#D73A49;--shiki-dark:#F47067"> ></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> userconf.txt</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> echo -n </span><span style="color:#032F62;--shiki-dark:#96D0FF">"raspberry"</span><span style="color:#D73A49;--shiki-dark:#F47067"> |</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> openssl</span><span style="color:#032F62;--shiki-dark:#96D0FF"> passwd</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -6</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -stdin</span><span style="color:#D73A49;--shiki-dark:#F47067"> >></span><span style="color:#032F62;--shiki-dark:#96D0FF"> userconf.txt</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cat userconf.txt</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi:$6$6YqlAsOsJSXzqC67$4YLGvwgPcK4qgi6KbF.922pCt6G6TMPc50Bu/HCutdHqgt0/JbwMiFKSry.CWbjIQX/NrfV8ObT1xoqzkf3Br1</span></span></code></pre></div>
+<h3 id="pulling-device-tree-and-kernel-image">Pulling Device Tree and Kernel Image<a class="heading-anchor" aria-label="Link to section" href="#pulling-device-tree-and-kernel-image">#</a></h3>
+<p>In order to boot the Linux kernel on Raspberry Pi, it needs the <strong>device tree</strong> which is inside the files
+called <em>device tree blob</em> (<code>dtb</code>). The device tree is a format to describe the locations of hardware
+inside the computer. This is quite common in embedded systems. While in PC realm, most of the hardware
+are <a href="https://unix.stackexchange.com/questions/399619/why-do-embedded-systems-need-device-tree-while-pcs-dont">discoverable</a>,
+and use a different (older) standard of “device tree” called <a href="https://en.wikipedia.org/wiki/ACPI">ACPI tables</a>.
+The Linux kernel will use this device tree structure to figure out which drivers to load, and configure them.</p>
+<p>Inside the <code>bootfs</code>, we can see multiple <code>dtb</code> files:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ls -la </span><span style="color:#D73A49;--shiki-dark:#F47067">|</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> grep</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -iE</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "dtb"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    30390</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-2-b.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    32753</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-3-b-plus.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    32142</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-3-b.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    30285</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-cm3.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    31318</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-zero-2-w.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    31318</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2710-rpi-zero-2.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    52593</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-4-b.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    52682</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-400.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    38182</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-cm4-io.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    53202</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-cm4.dtb</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rwx------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> firmanhp</span><span style="color:#032F62;--shiki-dark:#96D0FF">  staff</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    50504</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Apr</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  5</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  2023</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-cm4s.dtb</span></span></code></pre></div>
+<p>Each <code>dtb</code> file corresponds to one machine. For example, <code>bcm2710-rpi-3-b.dtb</code> contains the device tree
+for Raspberry Pi 3 Model B+. During the machine’s boot process, it will look up which <code>dtb</code> they will use
+based on the identity of the machine (which may vary by machines and vendor). The bootloader will load
+the <code>dtb</code> and boot up the kernel.</p>
+<p>In our case, we will try to emulate Raspberry Pi 4 Model B, so we will pull out <code>bcm2711-rpi-4-b.dtb</code> to
+our own directory.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cp bcm2711-rpi-4-b.dtb </span><span style="color:#D73A49;--shiki-dark:#F47067">~</span><span style="color:#24292E;--shiki-dark:#ADBAC7">/Code/raspi-emu/my-image</span></span></code></pre></div>
+<p>We also need to pull the <code>kernel8.img</code>, where the kernel resides:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cp kernel8.img </span><span style="color:#D73A49;--shiki-dark:#F47067">~</span><span style="color:#24292E;--shiki-dark:#ADBAC7">/Code/raspi-emu/my-image</span></span></code></pre></div>
+<h3 id="the-sd-card-image">The “SD card” image<a class="heading-anchor" aria-label="Link to section" href="#the-sd-card-image">#</a></h3>
+<p>The image that we just downloaded and modified, shall become the base of the SD card contents of the
+machine, let’s move it into the same folder as other files that we just pulled:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> mv $(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">YOUR_IMAGE</span><span style="color:#24292E;--shiki-dark:#ADBAC7">).img </span><span style="color:#D73A49;--shiki-dark:#F47067">~</span><span style="color:#24292E;--shiki-dark:#ADBAC7">/Code/raspi-emu/my-image</span></span></code></pre></div>
+<p>However, QEMU requires that the emulated SD card size to be a power of 2. We shall resize the image
+using the built-in tool in QEMU <code>qemu-img</code> to resize. Note that the resized result needs to be bigger than
+the current size, and power of 2 of course:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> qemu-img resize ./2024-07-04-raspios-bullseye-arm64-lite.img 4G</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">WARNING:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Image</span><span style="color:#032F62;--shiki-dark:#96D0FF"> format</span><span style="color:#032F62;--shiki-dark:#96D0FF"> was</span><span style="color:#032F62;--shiki-dark:#96D0FF"> not</span><span style="color:#032F62;--shiki-dark:#96D0FF"> specified</span><span style="color:#032F62;--shiki-dark:#96D0FF"> for</span><span style="color:#032F62;--shiki-dark:#96D0FF"> './2024-07-04-raspios-bullseye-arm64-lite.img'</span><span style="color:#032F62;--shiki-dark:#96D0FF"> and</span><span style="color:#032F62;--shiki-dark:#96D0FF"> probing</span><span style="color:#032F62;--shiki-dark:#96D0FF"> guessed</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raw.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">         Automatically</span><span style="color:#032F62;--shiki-dark:#96D0FF"> detecting</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> format</span><span style="color:#032F62;--shiki-dark:#96D0FF"> is</span><span style="color:#032F62;--shiki-dark:#96D0FF"> dangerous</span><span style="color:#032F62;--shiki-dark:#96D0FF"> for</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raw</span><span style="color:#032F62;--shiki-dark:#96D0FF"> images,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> write</span><span style="color:#032F62;--shiki-dark:#96D0FF"> operations</span><span style="color:#032F62;--shiki-dark:#96D0FF"> on</span><span style="color:#032F62;--shiki-dark:#96D0FF"> block</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#032F62;--shiki-dark:#96D0FF"> will</span><span style="color:#032F62;--shiki-dark:#96D0FF"> be</span><span style="color:#032F62;--shiki-dark:#96D0FF"> restricted.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">         Specify</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 'raw'</span><span style="color:#032F62;--shiki-dark:#96D0FF"> format</span><span style="color:#032F62;--shiki-dark:#96D0FF"> explicitly</span><span style="color:#032F62;--shiki-dark:#96D0FF"> to</span><span style="color:#032F62;--shiki-dark:#96D0FF"> remove</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> restrictions.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Image</span><span style="color:#032F62;--shiki-dark:#96D0FF"> resized.</span></span></code></pre></div>
+<h2 id="running-qemu">Running QEMU<a class="heading-anchor" aria-label="Link to section" href="#running-qemu">#</a></h2>
+<p>We have all the files ready. Let’s run QEMU with <code>aarch64</code> system:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">qemu-system-aarch64</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -machine</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raspi4b</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -nographic</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -dtb</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bcm2711-rpi-4-b.dtb</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -kernel</span><span style="color:#032F62;--shiki-dark:#96D0FF"> kernel8.img</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -sd</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 2024-07-04-raspios-bullseye-arm64-lite.img</span><span style="color:#005CC5;--shiki-dark:#F47067"> \</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">  -append</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "loglevel=8 root=/dev/mmcblk1p2 rootdelay=1 console=ttyAMA0,115200"</span></span></code></pre></div>
+<p>Below are explanations on the args. For more details,
+refer to the <a href="https://www.qemu.org/docs/master/system/invocation.html">official docs</a>
+and <a href="https://www.kernel.org/doc/html/v4.14/admin-guide/kernel-parameters.html">Linux docs</a>:</p>
+<ul>
+<li><code>-machine</code>: Used by QEMU to prepare the machine presets (RAM size, CPU core count, etc)</li>
+<li><code>-nographic</code>: Do not use GUI and let any outputs go to the terminal. This is useful for troubleshooting
+because we couldn’t scroll in the graphics mode.</li>
+<li><code>-dtb</code>: Which device tree blob to load.</li>
+<li><code>-kernel</code>: Which kernel image to load.</li>
+<li><code>-sd</code>: The image that will be used as the SD card. By default QEMU allows read/write access into the image.</li>
+<li><code>-append</code>: Additional kernel arguments to be added.
+<ul>
+<li><code>loglevel=8</code>: Increase log verbosity. 8 means all kinds of logs.</li>
+<li><code>root=/dev/mmcblk1p2</code>: Which device to mount as the root filesystem. How to figure this out can be
+seen on <a href="#troubleshooting">troubleshooting below</a>.</li>
+<li><code>rootdelay=1</code>: How long to wait (in seconds) before mounting the root filesystem. Apparently this is
+important because we do not want to mount before the SD card driver detects our SD card (and causing
+kernel panic due to inexistent device).</li>
+<li><code>console=ttyAMA0,115200</code>: Which console to output the kernel logs. From the
+<a href="https://interrupt.memfault.com/blog/emulating-raspberry-pi-in-qemu">original post</a>,
+this is required so QEMU can receive the kernel logs.</li>
+</ul>
+</li>
+</ul>
+<p>If boots correctly, we will see floods of kernel logs, and be greeted by the standard Linux
+prompt asking for our username and password.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Started Getty on tty1.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Started Serial Getty on ttyAMA0.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Reached target Login Prompts.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Started User Login Management.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Started Modem Manager.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 11</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ttyAMA0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> login:</span></span></code></pre></div>
+<p>We filled out <code>pi:raspberry</code> as the credential, therefore we can fill out <code>pi</code> and <code>raspberry</code> as the
+username and password, respectively.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> login:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Password:</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 6.1.21-v8+</span><span style="color:#6A737D;--shiki-dark:#768390"> #1642 SMP PREEMPT Mon Apr  3 17:24:16 BST 2023 aarch64</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">The</span><span style="color:#032F62;--shiki-dark:#96D0FF"> programs</span><span style="color:#032F62;--shiki-dark:#96D0FF"> included</span><span style="color:#032F62;--shiki-dark:#96D0FF"> with</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> system</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> free</span><span style="color:#032F62;--shiki-dark:#96D0FF"> software</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> exact</span><span style="color:#032F62;--shiki-dark:#96D0FF"> distribution</span><span style="color:#032F62;--shiki-dark:#96D0FF"> terms</span><span style="color:#032F62;--shiki-dark:#96D0FF"> for</span><span style="color:#032F62;--shiki-dark:#96D0FF"> each</span><span style="color:#032F62;--shiki-dark:#96D0FF"> program</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> described</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">individual</span><span style="color:#032F62;--shiki-dark:#96D0FF"> files</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /usr/share/doc/</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#032F62;--shiki-dark:#96D0FF">/copyright.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> comes</span><span style="color:#032F62;--shiki-dark:#96D0FF"> with</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ABSOLUTELY</span><span style="color:#032F62;--shiki-dark:#96D0FF"> NO</span><span style="color:#032F62;--shiki-dark:#96D0FF"> WARRANTY,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> to</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> extent</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">permitted</span><span style="color:#032F62;--shiki-dark:#96D0FF"> by</span><span style="color:#032F62;--shiki-dark:#96D0FF"> applicable</span><span style="color:#032F62;--shiki-dark:#96D0FF"> law.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Last</span><span style="color:#032F62;--shiki-dark:#96D0FF"> login:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Thu</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:16:52</span><span style="color:#032F62;--shiki-dark:#96D0FF"> BST</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 2024</span><span style="color:#032F62;--shiki-dark:#96D0FF"> on</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ttyAMA0</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span></span></code></pre></div>
+<p>We now have a running Linux virtual machine! You can exit the machine by pressing <code>CTRL+a</code> then press <code>x</code>.
+Let’s run few commands:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> df</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -h</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Filesystem</span><span style="color:#032F62;--shiki-dark:#96D0FF">      Size</span><span style="color:#032F62;--shiki-dark:#96D0FF">  Used</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Avail</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Use%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Mounted</span><span style="color:#032F62;--shiki-dark:#96D0FF"> on</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/root</span><span style="color:#032F62;--shiki-dark:#96D0FF">       1.7G</span><span style="color:#032F62;--shiki-dark:#96D0FF">  1.4G</span><span style="color:#032F62;--shiki-dark:#96D0FF">  204M</span><span style="color:#032F62;--shiki-dark:#96D0FF">  88%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">devtmpfs</span><span style="color:#032F62;--shiki-dark:#96D0FF">        427M</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     0</span><span style="color:#032F62;--shiki-dark:#96D0FF">  427M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   0%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /dev</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">tmpfs</span><span style="color:#032F62;--shiki-dark:#96D0FF">           461M</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     0</span><span style="color:#032F62;--shiki-dark:#96D0FF">  461M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   0%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /dev/shm</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">tmpfs</span><span style="color:#032F62;--shiki-dark:#96D0FF">           185M</span><span style="color:#032F62;--shiki-dark:#96D0FF">  748K</span><span style="color:#032F62;--shiki-dark:#96D0FF">  184M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   1%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /run</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">tmpfs</span><span style="color:#032F62;--shiki-dark:#96D0FF">           5.0M</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     0</span><span style="color:#032F62;--shiki-dark:#96D0FF">  5.0M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   0%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /run/lock</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/mmcblk1p1</span><span style="color:#032F62;--shiki-dark:#96D0FF">  255M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   31M</span><span style="color:#032F62;--shiki-dark:#96D0FF">  225M</span><span style="color:#032F62;--shiki-dark:#96D0FF">  13%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /boot</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">tmpfs</span><span style="color:#032F62;--shiki-dark:#96D0FF">            93M</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     0</span><span style="color:#032F62;--shiki-dark:#96D0FF">   93M</span><span style="color:#032F62;--shiki-dark:#96D0FF">   0%</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /run/user/1000</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> sudo</span><span style="color:#032F62;--shiki-dark:#96D0FF"> fdisk</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -l</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Disk</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /dev/mmcblk1:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GiB,</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4294967296</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bytes,</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 8388608</span><span style="color:#032F62;--shiki-dark:#96D0FF"> sectors</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Units:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> sectors</span><span style="color:#032F62;--shiki-dark:#96D0FF"> of</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> *</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 512</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 512</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bytes</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Sector</span><span style="color:#032F62;--shiki-dark:#96D0FF"> size</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (logical/physical): 512 bytes / 512 bytes</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">I/O</span><span style="color:#032F62;--shiki-dark:#96D0FF"> size</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (minimum/optimal): 512 bytes / 512 bytes</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Disklabel</span><span style="color:#032F62;--shiki-dark:#96D0FF"> type:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> dos</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Disk</span><span style="color:#032F62;--shiki-dark:#96D0FF"> identifier:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0x42e57318</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Device</span><span style="color:#032F62;--shiki-dark:#96D0FF">         Boot</span><span style="color:#032F62;--shiki-dark:#96D0FF">  Start</span><span style="color:#032F62;--shiki-dark:#96D0FF">     End</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Sectors</span><span style="color:#032F62;--shiki-dark:#96D0FF">  Size</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Id</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Type</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/mmcblk1p1</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">        8192</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  532479</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  524288</span><span style="color:#032F62;--shiki-dark:#96D0FF">  256M</span><span style="color:#032F62;--shiki-dark:#96D0FF">  c</span><span style="color:#032F62;--shiki-dark:#96D0FF"> W95</span><span style="color:#032F62;--shiki-dark:#96D0FF"> FAT32</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (LBA)</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/dev/mmcblk1p2</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">      532480</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4112383</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 3579904</span><span style="color:#032F62;--shiki-dark:#96D0FF">  1.7G</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 83</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Linux</span></span></code></pre></div>
+<p>It can be seen that the <code>/</code> partition is only 1.7G, despite the SD card size showing
+4GiB as expected from the resizing that we did. We could resize the partition to fit
+all the remaining free space but I’m not sure if we can do it on runtime. I didn’t explore
+more about this.</p>
+<p>Another interesting thing is we could write something onto the disk and it will persist:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> echo</span><span style="color:#032F62;--shiki-dark:#96D0FF"> "Hello world!"</span><span style="color:#D73A49;--shiki-dark:#F47067"> ></span><span style="color:#032F62;--shiki-dark:#96D0FF"> hello.txt</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ls</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -la</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">total</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 28</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">drwxr-xr-x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 2</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   4096</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:28</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">drwxr-xr-x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 3</span><span style="color:#032F62;--shiki-dark:#96D0FF"> root</span><span style="color:#032F62;--shiki-dark:#96D0FF"> root</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4096</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ..</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    112</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:16</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bash_history</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    220</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bash_logout</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   3523</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bashrc</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     13</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:28</span><span style="color:#032F62;--shiki-dark:#96D0FF"> hello.txt</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    807</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .profile</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> sudo</span><span style="color:#032F62;--shiki-dark:#96D0FF"> halt</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">...</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Reached target Shutdown.</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  OK  ] Reached target Final Step.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">         Starting</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Halt...</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[  534.250732] reboot: System halted</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390"># After running the QEMU command again</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 11</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ttyAMA0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> login:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Password:</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> raspberrypi</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 6.1.21-v8+</span><span style="color:#6A737D;--shiki-dark:#768390"> #1642 SMP PREEMPT Mon Apr  3 17:24:16 BST 2023 aarch64</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">The</span><span style="color:#032F62;--shiki-dark:#96D0FF"> programs</span><span style="color:#032F62;--shiki-dark:#96D0FF"> included</span><span style="color:#032F62;--shiki-dark:#96D0FF"> with</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> system</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> free</span><span style="color:#032F62;--shiki-dark:#96D0FF"> software</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> exact</span><span style="color:#032F62;--shiki-dark:#96D0FF"> distribution</span><span style="color:#032F62;--shiki-dark:#96D0FF"> terms</span><span style="color:#032F62;--shiki-dark:#96D0FF"> for</span><span style="color:#032F62;--shiki-dark:#96D0FF"> each</span><span style="color:#032F62;--shiki-dark:#96D0FF"> program</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> described</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">individual</span><span style="color:#032F62;--shiki-dark:#96D0FF"> files</span><span style="color:#032F62;--shiki-dark:#96D0FF"> in</span><span style="color:#032F62;--shiki-dark:#96D0FF"> /usr/share/doc/</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#032F62;--shiki-dark:#96D0FF">/copyright.</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Debian</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GNU/Linux</span><span style="color:#032F62;--shiki-dark:#96D0FF"> comes</span><span style="color:#032F62;--shiki-dark:#96D0FF"> with</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ABSOLUTELY</span><span style="color:#032F62;--shiki-dark:#96D0FF"> NO</span><span style="color:#032F62;--shiki-dark:#96D0FF"> WARRANTY,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> to</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> extent</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">permitted</span><span style="color:#032F62;--shiki-dark:#96D0FF"> by</span><span style="color:#032F62;--shiki-dark:#96D0FF"> applicable</span><span style="color:#032F62;--shiki-dark:#96D0FF"> law.</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Last</span><span style="color:#032F62;--shiki-dark:#96D0FF"> login:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Thu</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:21:59</span><span style="color:#032F62;--shiki-dark:#96D0FF"> BST</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 2024</span><span style="color:#032F62;--shiki-dark:#96D0FF"> on</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ttyAMA0</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ls</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -la</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">total</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 28</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">drwxr-xr-x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 2</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   4096</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:28</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">drwxr-xr-x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 3</span><span style="color:#032F62;--shiki-dark:#96D0FF"> root</span><span style="color:#032F62;--shiki-dark:#96D0FF"> root</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 4096</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ..</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-------</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    239</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:29</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bash_history</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    220</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bash_logout</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">   3523</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bashrc</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">     13</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:28</span><span style="color:#032F62;--shiki-dark:#96D0FF"> hello.txt</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">-rw-r--r--</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#032F62;--shiki-dark:#96D0FF"> pi</span><span style="color:#032F62;--shiki-dark:#96D0FF">   pi</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">    807</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Jul</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">  4</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 01:05</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .profile</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">pi@raspberrypi:~$</span><span style="color:#032F62;--shiki-dark:#96D0FF"> cat</span><span style="color:#032F62;--shiki-dark:#96D0FF"> hello.txt</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Hello</span><span style="color:#032F62;--shiki-dark:#96D0FF"> world!</span></span></code></pre></div>
+<p>The original post also mentioned that we could also make the machine to be accessible via SSH,
+but I didn’t bother for now.</p>
+<h3 id="troubleshooting">Troubleshooting<a class="heading-anchor" aria-label="Link to section" href="#troubleshooting">#</a></h3>
+<p>Here are some findings when doing this small experiment.</p>
+<h4 id="qemu-monitor-mode">QEMU Monitor mode<a class="heading-anchor" aria-label="Link to section" href="#qemu-monitor-mode">#</a></h4>
+<p>QEMU has a special “monitor” mode that we can invoke by pressing <code>Ctrl+a</code> then press <code>c</code>. From there, we can do
+many stuffs. For example, taking a screenshot of the graphics, even in <code>-nographics</code> mode. For more details,
+we can run <code>help</code> command. To return back to the console, press <code>Ctrl+a -> c</code> again.</p>
+<figure class="post-figure"><img src="/assets/20240909-raspberry-pi-qemu/img/screendump.png" alt="Example of screendump"><figcaption class="image-caption">
+Example of QEMU <code>screendump</code>.</figcaption></figure>
+<h4 id="no-kernel-logs">No kernel logs<a class="heading-anchor" aria-label="Link to section" href="#no-kernel-logs">#</a></h4>
+<p>I met an issue where I couldn’t see the kernel logs in the terminal despite having <code>-nographics</code> set. However,
+I could see it when I run it with graphics. I still don’t know what’s wrong, but I fixed it by downgrading
+the OS version from 12 <code>bookworm</code> to 11 <code>bullseye</code>.</p>
+<h4 id="kernel-panic">Kernel panic<a class="heading-anchor" aria-label="Link to section" href="#kernel-panic">#</a></h4>
+<p>This is the thing that I found when copying 1</p><div></div> from the original post. I used a different version of the OS, though.
+The original post uses <code>root=/dev/mmcblk0p2</code> instead of <code>root=/dev/mmcblk1p2</code>. I met this kind of kernel panic:<p></p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.298226] Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">0,0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.298560] CPU: 3 PID: 1 Comm: swapper/0 Not tainted 6.1.21-v8+ </span><span style="color:#6A737D;--shiki-dark:#768390">#1642</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.298810] Hardware name: Raspberry Pi 4 Model B (</span><span style="color:#6F42C1;--shiki-dark:#F69D50">DT</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299122] Call trace:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299282]  dump_backtrace+0x120/0x130</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299494]  show_stack+0x20/0x30</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299620]  dump_stack_lvl+0x8c/0xb8</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299740]  dump_stack+0x18/0x34</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299834]  panic+0x1a4/0x37c</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.299926]  mount_block_root+0x140/0x21c</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300046]  mount_root+0x1e8/0x21c</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300126]  prepare_namespace+0x134/0x174</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300220]  kernel_init_freeable+0x2a0/0x2cc</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300324]  kernel_init+0x2c/0x138</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300412]  ret_from_fork+0x10/0x20</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.300820] SMP: stopping secondary CPUs</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.301252] Kernel Offset: disabled</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.301402] CPU features: 0x20000,2003c080,0000421b</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.301628] Memory Limit: none</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.301974] ---[ </span><span style="color:#D73A49;--shiki-dark:#F47067">end</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#D73A49;--shiki-dark:#F47067">,</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) ]---</span></span></code></pre></div>
+<p>In addition to no kernel log on terminal that I met, this made debugging really hard. From the message, it looked like
+an error occured during mounting the root filesystem. After downgrading, I finally could scroll the messages and I found
+this message:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.292562] /dev/root: Cant open blockdev</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.293044] VFS: Cannot open root device </span><span style="color:#032F62;--shiki-dark:#96D0FF">"mmcblk0p2"</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> or unknown-block(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">0,0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">): error -6</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.293224] Please append a correct </span><span style="color:#032F62;--shiki-dark:#96D0FF">"root="</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> boot option; </span><span style="color:#6F42C1;--shiki-dark:#F69D50">here</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> available</span><span style="color:#032F62;--shiki-dark:#96D0FF"> partitions:</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">...</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.297172] b300         4194304 mmcblk1</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.297214]  driver: mmcblk</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.297432]   b301          262144 mmcblk1p1 42e57318-01</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.297528]</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    3.297724]   b302         1789952 mmcblk1p2 42e57318-02</span></span></code></pre></div>
+<p>So I could correct the argument to be <code>/dev/mmcblk1p2</code>. The kernel panic disappears after that.</p>
+<h4 id="rootdelay1">rootdelay=1<a class="heading-anchor" aria-label="Link to section" href="#rootdelay1">#</a></h4>
+<p>I was curious on why do we even need to delay. It turns out, that if we remove this, we will meet the same
+kernel panic as above. The debugging message is a bit different, though:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.279046] mmc1: host does not support reading read-only switch, assuming write-enable</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.280205] mmc1: new high speed SDHC card at address 4567</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.284859] mmcblk1: mmc1:4567 QEMU</span><span style="color:#D73A49;--shiki-dark:#F47067">!</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> 4.00</span><span style="color:#032F62;--shiki-dark:#96D0FF"> GiB</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.285110] /dev/root: Cant open blockdev</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.285425] VFS: Cannot open root device </span><span style="color:#032F62;--shiki-dark:#96D0FF">"mmcblk1p2"</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> or unknown-block(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">0,0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">): error -6</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.285907] Please append a correct </span><span style="color:#032F62;--shiki-dark:#96D0FF">"root="</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> boot option; </span><span style="color:#6F42C1;--shiki-dark:#F69D50">here</span><span style="color:#032F62;--shiki-dark:#96D0FF"> are</span><span style="color:#032F62;--shiki-dark:#96D0FF"> the</span><span style="color:#032F62;--shiki-dark:#96D0FF"> available</span><span style="color:#032F62;--shiki-dark:#96D0FF"> partitions:</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">...</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.289019] 0000         4194304 mmcblk1</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.289049]  driver: mmcblk</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[    2.289412] Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">0,0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span></code></pre></div>
+<p>It didn’t see the <code>mmcblk1p2</code> as expected. To me it looks like the kernel tries to mount the root filesystem
+before the SD card driver even finishes probing the partitions inside the device. IMO there should be a proper
+way to wait instead of delaying, but I don’t know.</p>
+<h2 id="conclusion">Conclusion<a class="heading-anchor" aria-label="Link to section" href="#conclusion">#</a></h2>
+<p>We managed to run QEMU to emulate a Raspberry Pi machine. It took me a while to sort the failures since this is
+my first time using QEMU. Overall I am quite happy that I could understand some of the inner workings of
+the emulation.</p>
+<p>The original post also mentions on how to access the machine via SSH, and how to dockerize it as well, so be sure
+to <a href="https://interrupt.memfault.com/blog/emulating-raspberry-pi-in-qemu">check it out</a>.</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#preparing-the-files" data-toc-link="preparing-the-files" data-astro-cid-xvrfupwn>Preparing the files</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#os-version" data-toc-link="os-version" data-astro-cid-xvrfupwn>OS Version</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#mounting-the-boot-partition" data-toc-link="mounting-the-boot-partition" data-astro-cid-xvrfupwn>Mounting the boot partition</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#adding-credentials" data-toc-link="adding-credentials" data-astro-cid-xvrfupwn>Adding Credentials</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#pulling-device-tree-and-kernel-image" data-toc-link="pulling-device-tree-and-kernel-image" data-astro-cid-xvrfupwn>Pulling Device Tree and Kernel Image</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-sd-card-image" data-toc-link="the-sd-card-image" data-astro-cid-xvrfupwn>The “SD card” image</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#running-qemu" data-toc-link="running-qemu" data-astro-cid-xvrfupwn>Running QEMU</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#troubleshooting" data-toc-link="troubleshooting" data-astro-cid-xvrfupwn>Troubleshooting</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

@@ -1,0 +1,218 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>A small update</title><meta name="description" content="Career, and thoughts."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20241207-small-update" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>A small update</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-12-06T18:30:00.000Z" data-astro-cid-yvbahnfj>Dec 6, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/General/" class="meta-tag" data-astro-cid-yvbahnfj>#General</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#career" data-toc-link="career" data-astro-cid-xvrfupwn>Career</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#leetcode" data-toc-link="leetcode" data-astro-cid-xvrfupwn>LeetCode</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#advent-of-code" data-toc-link="advent-of-code" data-astro-cid-xvrfupwn>Advent of Code</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#osdev-progress" data-toc-link="osdev-progress" data-astro-cid-xvrfupwn>OSDev progress</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>I completely went through November without writing anything for this blog. There
+were a lot happening lately (i think) and it was hard for me to find some time
+even for my pet projects. Not sure if that was a good thing or not, I think I
+need to manage my priorities better and set a more realistic target on these
+kind of side projects.</p>
+<h2 id="career">Career<a class="heading-anchor" aria-label="Link to section" href="#career">#</a></h2>
+<p>Recently I got promoted to Senior Software Engineer (<em>yay</em>). I guess that means
+more meetings, more discussion, less coding (<em>aww</em>). They said leadership
+acknowledges my technical expertise (me being a guy with always zero confidence
+says no LOL), and could work more on leading and bring more ✨influence✨ to the
+team. I personally never think myself as the one that has the “expertise” so
+being acknowledged by someone at least tells me that I am actually not a
+fraud…</p>
+<p>I’ve been spending most of my time reviewing my colleague’s codes and design
+now (reviewer). Sometimes someone asks me something that is really obscure
+and I helped them to look up the answer (motivator/cheerleader). I actually did
+not put any filters on my email inbox, and sometimes I read those bug email floods
+and find out something interesting that was happening outside of my scope of work.
+Those random facts sometimes do help answer those obscure questions.</p>
+<p>I always try to be nice during my reviews. If the review comments are long, I
+usually write out several lengthy reasons on why we should do A,B,C. Sometimes I
+also provide code examples thru godbolt.org to prove a point (<em>talk is cheap,
+show me the code</em> kind of thing). Apparently I got a recognition over this, and
+I got the title of this quarter’s “software quality MVP”. I also received the
+trophy (it’s medium sized) and they put it on my desk for everyone to see (<em>oh
+no</em>).</p>
+<h2 id="leetcode"><a href="https://leetcode.com/u/painneon/">LeetCode</a><a class="heading-anchor" aria-label="Link to section" href="#leetcode">#</a></h2>
+<p>I have to admit that I am not that good in these algorithmic questions. Despite
+participating in several competitions, I consider my skills as mediocre compared
+to my other friends who have won several of them. Compared to CodeForces,
+LeetCode platform is more aimed towards interview questions, and is not as
+difficult as CF.</p>
+<p>I am currently engaged in their daily challenge, currently on 33-day streak. I
+just work on the daily challenge and sometimes like 1-3 medium-hard problems
+just to prevent being rusty. Their C++ code template, in my honest opinion,
+sometimes has some “weird” design decisions, like passing a <a href="https://leetcode.com/problems/take-k-of-each-character-from-left-and-right/description/">parameter by value
+for
+strings</a>:</p>
+<div class="code-block" data-code-block="" data-language="cpp"><div class="code-block-header"><span class="code-lang">cpp</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy cpp code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">class</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Solution</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">public:</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    int</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> takeCharacters</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">string</span><span style="color:#E36209;--shiki-dark:#F69D50"> s</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> k</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        </span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">};</span></span></code></pre></div>
+<p>Or, passing <code>vector&#x3C;vector&#x3C;int>></code> for <a href="https://leetcode.com/problems/minimum-time-to-visit-a-cell-in-a-grid/description/">matrix/grid data structures (or any
+multidimensional
+arrays)</a>.</p>
+<div class="code-block" data-code-block="" data-language="cpp"><div class="code-block-header"><span class="code-lang">cpp</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy cpp code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="cpp"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">class</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Solution</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">public:</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    int</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> minimumTime</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">vector</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">vector</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7">>></span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> grid</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        </span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">};</span></span></code></pre></div>
+<p>I guess at this point I’m being too nitpicky. However, the first case actually
+can cost us some memory usage and runtime for our submissions. It feels bad for
+being penalized for having a bad interface, which is something that has nothing
+to do with our solution. Luckily these usually can be worked around by making
+<code>string s</code> into <code>const string&#x26; s</code>. From my experience on that problem it saved
+me 50% of memory usage and shaved off several runtime as well.</p>
+<p>For <code>vector&#x3C;vector&#x3C;int>></code>. It is weird because it means the matrix is not
+guaranteed to be laid out contiguously in memory. I think this is because in C++
+there is no way in doing that other than using <code>array&#x3C;array&#x3C;int, M>, N></code> but it
+requires a template param (fixed during compile time). Maybe a helper struct
+would help here? I think other languages may also have the same problem in
+representing these?</p>
+<h2 id="advent-of-code"><a href="https://github.com/firmanhp/aoc2024">Advent of Code</a><a class="heading-anchor" aria-label="Link to section" href="#advent-of-code">#</a></h2>
+<p>This is my first time participating Advent of Code. I already knew the event
+since years ago but didn’t have time to commit into it. I hope I can commit into
+this year’s AoC (I missed 5 days already, sadly). We will see. I will probably
+use languages other than C++ if the problem becomes more parsing and less
+problem solving.</p>
+<h2 id="osdev-progress"><a href="https://github.com/firmanhp/osdev">OSDev</a> progress<a class="heading-anchor" aria-label="Link to section" href="#osdev-progress">#</a></h2>
+<p>I had several small steps on this project. It is hard to work on both write-up
+and development. I decided to write the small progress updates into the
+<code>project_logs.md</code>(<a href="https://github.com/firmanhp/osdev/blob/main/project_logs.md">https://github.com/firmanhp/osdev/blob/main/project_logs.md</a>)
+and only write stuffs that are interesting into the blog. I still have a long
+way into making this a proper operating system with display, filesystem, and
+audio. I believe this will be a good learning investment for me.</p>
+<p>That’s all. Now I write too much for a “small update”. I need to stop and work
+on real stuffs. See you later~</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#career" data-toc-link="career" data-astro-cid-xvrfupwn>Career</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#leetcode" data-toc-link="leetcode" data-astro-cid-xvrfupwn>LeetCode</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#advent-of-code" data-toc-link="advent-of-code" data-astro-cid-xvrfupwn>Advent of Code</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#osdev-progress" data-toc-link="osdev-progress" data-astro-cid-xvrfupwn>OSDev progress</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

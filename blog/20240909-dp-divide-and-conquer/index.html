@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Teknik Divide and Conquer dalam Dynamic Programming</title><meta name="description" content="(Post in Indonesian) Trik khusus dalam Dynamic Programming."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20240909-dp-divide-and-conquer" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Teknik Divide and Conquer dalam Dynamic Programming</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-09-09T10:00:00.000Z" data-astro-cid-yvbahnfj>Sep 9, 2024</time> <a href="/blog/lang/id/" class="meta-badge" data-astro-cid-yvbahnfj>ID</a> <a href="/blog/tags/competitive-programming/" class="meta-tag" data-astro-cid-yvbahnfj>#competitive-programming</a><a href="/blog/tags/dynamic-programming/" class="meta-tag" data-astro-cid-yvbahnfj>#dynamic-programming</a><a href="/blog/tags/indonesia/" class="meta-tag" data-astro-cid-yvbahnfj>#indonesia</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#materi" data-toc-link="materi" data-astro-cid-xvrfupwn>Materi</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#contoh-soal" data-toc-link="contoh-soal" data-astro-cid-xvrfupwn>Contoh soal</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#spoj-larmy" data-toc-link="spoj-larmy" data-astro-cid-xvrfupwn>SPOJ LARMY</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#kattis-famouspagoda" data-toc-link="kattis-famouspagoda" data-astro-cid-xvrfupwn>Kattis famouspagoda</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <div class="callout callout-warning" data-callout="warning"><p><strong>DISCLAIMER:</strong>
+Post ini memuat slide saja. Slide ini dibuat waktu saya diminta bantuan oleh Pak Denny
+untuk mengisi kelas <em>Competitive Programming</em> waktu saya masih kuliah. Sekarang, saya sudah
+tidak lagi aktif dalam dunia <em>competitive programming</em>. Mohon maaf apabila ada
+kesalahan 🙏🙏🙏, <em>source code</em> untuk latexnya pun sudah hilang.</p></div>
+<h2 id="materi">Materi<a class="heading-anchor" aria-label="Link to section" href="#materi">#</a></h2>
+<p>Slide bisa <a href="/assets/20240909-dp-divide-and-conquer/pdf/dnc_dp.pdf">diunduh disini</a>.</p>
+<p><embed class="min-h-[600px] w-full" src="/assets/20240909-dp-divide-and-conquer/pdf/dnc_dp.pdf" type="application/pdf"></p>
+<h2 id="contoh-soal">Contoh soal<a class="heading-anchor" aria-label="Link to section" href="#contoh-soal">#</a></h2>
+<h3 id="spoj-larmy">SPOJ LARMY<a class="heading-anchor" aria-label="Link to section" href="#spoj-larmy">#</a></h3>
+<p>Untuk soal, <a href="https://www.spoj.com/problems/LARMY/">klik disini</a></p>
+<p>Solusinya (dalam C++) bisa dilihat di bawah:</p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;bits/stdc++.h></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#define</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> INF</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#D73A49;--shiki-dark:#F47067">e</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">9</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">using namespace std;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N, K, </span><span style="color:#E36209;--shiki-dark:#F69D50">H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">][</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> greater_heights</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">][</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">5005</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> precompute_C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Hitung banyaknya tentara yang lebih tinggi di sebelah kiri</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Ini awalnya akan menjadi nilai dari C[1][i]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> j </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; j </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">j) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">            if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#E36209;--shiki-dark:#F69D50">H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[j] </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#E36209;--shiki-dark:#F69D50"> H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i])</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">                ++</span><span style="color:#E36209;--shiki-dark:#F69D50">greater_heights</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Precompute C[i][j]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> j </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i; j </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">j) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#F69D50">            C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i][j] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#E36209;--shiki-dark:#F69D50"> greater_heights</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[j] </span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#E36209;--shiki-dark:#F69D50"> C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i][j</span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">        // Untuk membuang orang ke-i untuk menghitung C[i+1][j]</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">        // menggunakan array greater_heights[]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> j </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i</span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; j</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">j) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">            if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#E36209;--shiki-dark:#F69D50">H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[j] </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#E36209;--shiki-dark:#F69D50"> H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i]) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">                --</span><span style="color:#E36209;--shiki-dark:#F69D50">greater_heights</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[j];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">// Basecase DP</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> fill_basecase</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i)</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#F69D50">        dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">][i] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> INF;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> K; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i)</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#F69D50">        dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i][</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> INF;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> fill_table_row</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> i</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> l</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> r</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> opt_l</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#E36209;--shiki-dark:#F69D50"> opt_r</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (l </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> r)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        return</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> mid </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (l</span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#24292E;--shiki-dark:#ADBAC7">r)</span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    </span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // mendapatkan opt_mid sambil mengisi nilai dp</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> opt_mid </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> k </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> opt_l; k </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> opt_r; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">k) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">        // apabila k >= mid, sudah tidak termasuk batasan rekurens</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (k </span><span style="color:#D73A49;--shiki-dark:#F47067">>=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> mid)</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">            break</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> val </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#E36209;--shiki-dark:#F69D50"> dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i</span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">][k] </span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#E36209;--shiki-dark:#F69D50"> C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[k</span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">][mid];</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> ((opt_mid </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">||</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#E36209;--shiki-dark:#F69D50">dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i][mid] </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> val)) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            opt_mid </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> k;</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#F69D50">            dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i][mid] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> val;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    fill_table_row</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(i, l, mid</span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, opt_l, opt_mid);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    fill_table_row</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(i, mid</span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, r, opt_mid, opt_r);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> main</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cin.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">sync_with_stdio</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cin.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">tie</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cin </span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N </span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> K;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i</span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;i</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7">N;</span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        cin </span><span style="color:#D73A49;--shiki-dark:#F47067">>></span><span style="color:#E36209;--shiki-dark:#F69D50"> H</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    precompute_C</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    fill_basecase</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // Isi tabel DP</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i</span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;i</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7">K;</span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        fill_table_row</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(i, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, N, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, N</span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    cout </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#E36209;--shiki-dark:#F69D50"> dp</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[K][N] </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;&#x3C;</span><span style="color:#032F62;--shiki-dark:#96D0FF"> '</span><span style="color:#005CC5;--shiki-dark:#F47067">\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">'</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    return</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<h3 id="kattis-famouspagoda">Kattis famouspagoda<a class="heading-anchor" aria-label="Link to section" href="#kattis-famouspagoda">#</a></h3>
+<p>Untuk soal, <a href="https://open.kattis.com/problems/famouspagoda">klik disini</a></p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#materi" data-toc-link="materi" data-astro-cid-xvrfupwn>Materi</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#contoh-soal" data-toc-link="contoh-soal" data-astro-cid-xvrfupwn>Contoh soal</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#spoj-larmy" data-toc-link="spoj-larmy" data-astro-cid-xvrfupwn>SPOJ LARMY</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#kattis-famouspagoda" data-toc-link="kattis-famouspagoda" data-astro-cid-xvrfupwn>Kattis famouspagoda</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

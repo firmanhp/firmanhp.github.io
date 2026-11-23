@@ -1,0 +1,351 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>C++&#39;s std::vector, but relocating data is cheap(er)</title><meta name="description" content="An idea from a random YouTube comment I saw months ago"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20260620-stdvector-cheap-relocation" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>C++&#39;s <code class="title-code">std::vector</code>, but relocating data is cheap(er)</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2026-06-20T00:00:00.000Z" data-astro-cid-yvbahnfj>Jun 20, 2026</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a>  </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-idea" data-toc-link="the-idea" data-astro-cid-xvrfupwn>The idea</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#resizing" data-toc-link="resizing" data-astro-cid-xvrfupwn>Resizing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#linuxs-mremap" data-toc-link="linuxs-mremap" data-astro-cid-xvrfupwn>Linux’s mremap</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-code" data-toc-link="the-code" data-astro-cid-xvrfupwn>The code</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#benchmark" data-toc-link="benchmark" data-astro-cid-xvrfupwn>Benchmark</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#worth-it" data-toc-link="worth-it" data-astro-cid-xvrfupwn>Worth it?</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#references" data-toc-link="references" data-astro-cid-xvrfupwn>References</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>This is sort of in a similar theme in the previous post, where I talked about
+the <code>std::move</code> behavior under <code>std::vector</code>’s resizing. I stumbled upon a
+YouTube comment that mentioned an idea about resizing vectors but you don’t
+have to actually move the data contents. Unfortunately, that was few months ago,
+and I already lost the link. I just happened to have the time to try out this idea.</p>
+<h2 id="the-idea">The idea<a class="heading-anchor" aria-label="Link to section" href="#the-idea">#</a></h2>
+<p>In high level, everything that is running under a process are done using
+virtual memory addressing space. Those contiguous arrays are only contiguous in virtual
+memory space, but not necessarily in physical memory space.</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>std::vector&#x3C;int> v = {A, B, C, D, E, F, G, H};</span></span>
+<span class="line"><span>v.data(); // 0x1000</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Memory layout (virtual):</span></span>
+<span class="line"><span>         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE</span></span>
+<span class="line"><span>0x1000:   A    B    C    D    E    F    G   H</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Physical memory layout (assume 1 frame holds 8 bytes/4 ints):</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Frame 0x3A000:   A    B    C    D</span></span>
+<span class="line"><span>Frame 0x3A001:   E    F    G    H</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Virtual -> Physical mapping:</span></span>
+<span class="line"><span>0x1000 -> Frame 0x3A000</span></span>
+<span class="line"><span>0x1008 -> Frame 0x3A008</span></span></code></pre></div>
+<p>The physical memory addresing works in frames/pages. Commonly, each page holds 4096 bytes (4 KB).
+This is configurable depending on what the operating system and CPU supports. It makes them
+easier to manage the memory and avoid fragmentation. In order to convert a virtual address to a physical address, the operating system uses a page table. The page table basically is just a map
+for that virtual address space to the actual physical memory address, and that is transparent
+to the user.</p>
+<h3 id="resizing">Resizing<a class="heading-anchor" aria-label="Link to section" href="#resizing">#</a></h3>
+<p><code>std::vector</code> resizes itself by allocating a new memory segment longer than the current one,
+moving the data to the new segment, and then freeing the old segment. This is done to keep the
+data contiguous. Since they are mapped to a physical pages and in the physical space, they are
+not contiguous anyway, we can actually just “allocate the additional segment needed”, and “update
+the mappings of the old segment”.</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>std::vector&#x3C;int> v = {A, B, C, D, E, F, G, H};</span></span>
+<span class="line"><span>v.data(); // 0x1000</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Memory layout (virtual):</span></span>
+<span class="line"><span>         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE</span></span>
+<span class="line"><span>0x1000:   A    B    C    D    E    F    G    H</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Virtual -> Physical mapping:</span></span>
+<span class="line"><span>0x1000 -> Frame 0x3A000</span></span>
+<span class="line"><span>0x1008 -> Frame 0x3A008</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Push extra data: {I, J, K, L}, extends vector by 4</span></span>
+<span class="line"><span>- Remap the virtual address 0x1000 to fit 12 bytes</span></span>
+<span class="line"><span>  - Reserved additional page in physical address 0x3B000</span></span>
+<span class="line"><span>- Virtual mapping now updates to</span></span>
+<span class="line"><span>  - 0x5000 -> Frame 0x3A000</span></span>
+<span class="line"><span>  - 0x5008 -> Frame 0x3A008</span></span>
+<span class="line"><span>  - 0x5010 -> Frame 0x3B000 (Our new page)</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Now, virtual memory layout is now:</span></span>
+<span class="line"><span>Memory layout (virtual, x is uninitialized data, usually zero):</span></span>
+<span class="line"><span>         0x0  0x2  0x4  0x6  0x8  0xA  0xC  0xE</span></span>
+<span class="line"><span>0x5000:   A    B    C    D    E    F    G    H</span></span>
+<span class="line"><span>0x5010:   x    x    x    x</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Push {I, J, K, L} as usual.</span></span></code></pre></div>
+<p>Notice that we don’t have to move the data, because the virtual address maps to the
+same physical pages as before.</p>
+<h3 id="linuxs-mremap">Linux’s mremap<a class="heading-anchor" aria-label="Link to section" href="#linuxs-mremap">#</a></h3>
+<p>Linux provides a system call which does that exactly: <a href="https://man7.org/linux/man-pages/man2/mremap.2.html">mremap</a> which allows to remap a memory mapping to shrink/enlarge the size.</p>
+<h2 id="the-code">The code<a class="heading-anchor" aria-label="Link to section" href="#the-code">#</a></h2>
+<p>Welp, enough talk, I just want to prove whether the idea works anyway.</p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;sys/mman.h></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;utility></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;math.h></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;cassert></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">#include</span><span style="color:#032F62;--shiki-dark:#96D0FF"> &#x3C;cstring></span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">namespace virtual_vector {</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">template </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">typename T</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> class VirtualVector {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">public:</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">  VirtualVector</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() : </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(nullptr), </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">capacity_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">), </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {}</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  ~</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">VirtualVector</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> size_; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#E36209;--shiki-dark:#F69D50">      data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[i].</span><span style="color:#D73A49;--shiki-dark:#F47067">~</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">!=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> nullptr) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">      munmap</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(static_cast</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;void</span><span style="color:#D73A49;--shiki-dark:#F47067"> *></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_), capacity_ </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#D73A49;--shiki-dark:#F47067"> sizeof</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(T));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> reserve</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> capacity) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (capacity </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> capacity_) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">      return</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> nullptr) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> static_cast</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">T </span><span style="color:#D73A49;--shiki-dark:#F47067">*></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">mmap</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(nullptr, capacity </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#D73A49;--shiki-dark:#F47067"> sizeof</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(T),</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">                                    PROT_READ </span><span style="color:#D73A49;--shiki-dark:#F47067">|</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> PROT_WRITE,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">                                    MAP_PRIVATE </span><span style="color:#D73A49;--shiki-dark:#F47067">|</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> MAP_ANONYMOUS, </span><span style="color:#D73A49;--shiki-dark:#F47067">-</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    } </span><span style="color:#D73A49;--shiki-dark:#F47067">else</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> static_cast</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">T </span><span style="color:#D73A49;--shiki-dark:#F47067">*></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">mremap</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(static_cast</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;void</span><span style="color:#D73A49;--shiki-dark:#F47067"> *></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_),</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">                                      capacity_ </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#D73A49;--shiki-dark:#F47067"> sizeof</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(T), capacity </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#D73A49;--shiki-dark:#F47067"> sizeof</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(T),</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">                                      MREMAP_MAYMOVE));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    assert</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data_ </span><span style="color:#D73A49;--shiki-dark:#F47067">!=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> MAP_FAILED);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    capacity_ </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> capacity;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> push_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(T value) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (size_ </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> capacity_) {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">      reserve</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">std::max</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067">UL</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, capacity_ </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 2</span><span style="color:#24292E;--shiki-dark:#ADBAC7">));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    new</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50">data_</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[size_</span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">]) </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">std::move</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(value));</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  T</span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() { </span><span style="color:#D73A49;--shiki-dark:#F47067">return</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data_; }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  const</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> T</span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#D73A49;--shiki-dark:#F47067">return</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data_; }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">private:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  T </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7">data_;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> capacity_;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  size_t</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> size_;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span><span style="color:#6A737D;--shiki-dark:#768390"> // namespace virtual_vector</span></span>
+<span class="line"></span></code></pre></div>
+<p>That’s it… nothing special. We used <code>mmap/munmap/mremap</code> instead of
+<code>new/delete</code> to achieve it.</p>
+<h2 id="benchmark">Benchmark<a class="heading-anchor" aria-label="Link to section" href="#benchmark">#</a></h2>
+<p>So to spin up how this thing performs:</p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> const</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> std::string </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">kStr</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#032F62;--shiki-dark:#96D0FF">'x'</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> BM_VirtualVector_String_PushBack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(benchmark::State</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> state</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    const</span><span style="color:#D73A49;--shiki-dark:#F47067"> int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (auto _ : state) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        VirtualVector</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">std::string</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> v;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">kStr</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        benchmark::DoNotOptimize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">SetItemsProcessed</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">iterations</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> BM_StdVector_String_PushBack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(benchmark::State</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> state</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    const</span><span style="color:#D73A49;--shiki-dark:#F47067"> int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (auto _ : state) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::vector</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">std::string</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> v;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">kStr</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        benchmark::DoNotOptimize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">SetItemsProcessed</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">iterations</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">BENCHMARK</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(BM_VirtualVector_String_PushBack)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">RangeMultiplier</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">Range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">512</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 26</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">BENCHMARK</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(BM_StdVector_String_PushBack)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">RangeMultiplier</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">Range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">512</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 26</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">struct</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> LargePOD {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> value;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    char</span><span style="color:#E36209;--shiki-dark:#F69D50"> data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1024</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#D73A49;--shiki-dark:#F47067"> sizeof</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)];</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> BM_VirtualVector_LargePOD_PushBack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(benchmark::State</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> state</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    const</span><span style="color:#D73A49;--shiki-dark:#F47067"> int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (auto _ : state) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        VirtualVector</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">LargePOD</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> v;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            LargePOD p{}; p.value </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(p);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        benchmark::DoNotOptimize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">SetItemsProcessed</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">iterations</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> void</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> BM_StdVector_LargePOD_PushBack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(benchmark::State</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#E36209;--shiki-dark:#F69D50"> state</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    const</span><span style="color:#D73A49;--shiki-dark:#F47067"> int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (auto _ : state) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        std::vector</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">LargePOD</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> v;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">        for</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">int</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">; i </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N; </span><span style="color:#D73A49;--shiki-dark:#F47067">++</span><span style="color:#24292E;--shiki-dark:#ADBAC7">i) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            LargePOD p{}; p.value </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> i;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">            v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push_back</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(p);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">        }</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">        benchmark::DoNotOptimize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(v.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">data</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">SetItemsProcessed</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(state.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">iterations</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> N);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">BENCHMARK</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(BM_VirtualVector_LargePOD_PushBack)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">RangeMultiplier</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">Range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">512</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 21</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">BENCHMARK</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(BM_StdVector_LargePOD_PushBack)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">RangeMultiplier</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">4</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">Range</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">512</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 21</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">BENCHMARK_MAIN</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"></span></code></pre></div>
+<p><img src="/assets/20260620-stdvector-cheap-relocation/img/LargePOD_PushBack.png" alt=""></p>
+<p>On a vector of large POD/structs (1KB above), it scales pretty well. It was faster than <code>std::vector</code> starting from ~16K elements.
+I guess that’s where the relocation exceeds our cache (just a speculation!).</p>
+<p><img src="/assets/20260620-stdvector-cheap-relocation/img/String_PushBack.png" alt=""></p>
+<p>This is where it gets interesting. This is actually illegal since you actually cannot use <code>std::string</code> here due to the reason
+I explain later. However, it seemed like the <code>VirtualVector</code> had some advantage until at some point where it goes back to
+<code>std::vector</code> (even losing at it!). Perhaps that the <code>mremap</code> overhead and rewriting the page table is getting more expensive
+the more pages are remapped.</p>
+<h2 id="worth-it">Worth it?<a class="heading-anchor" aria-label="Link to section" href="#worth-it">#</a></h2>
+<p>This method only works if the containing objects do not contain pointers to somewhere in its own struct. For example,
+<code>std::string</code> has a short string optimization where short strings are contained within the <code>std::string</code> struct itself,
+and therefore no extra heap allocation. In that case, the <code>::data()</code> will point to some memory region within the <code>std::struct</code>.
+If we remap the address, the pointer is no longer valid.</p>
+<p>As far as I could tell from above, this approach is only worth if what you need is a contiguous, dynamic array of large PODs.
+Again, these above assumes that you don’t know the final count of the elements. If you know, <code>std::vector::reserve()</code> does
+the job very well already.</p>
+<p>For me, that is a very niche requirement.</p>
+<h2 id="references">References<a class="heading-anchor" aria-label="Link to section" href="#references">#</a></h2>
+<ul>
+<li><a href="https://man7.org/linux/man-pages/man2/mremap.2.html">mremap</a></li>
+</ul> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-idea" data-toc-link="the-idea" data-astro-cid-xvrfupwn>The idea</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#resizing" data-toc-link="resizing" data-astro-cid-xvrfupwn>Resizing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#linuxs-mremap" data-toc-link="linuxs-mremap" data-astro-cid-xvrfupwn>Linux’s mremap</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-code" data-toc-link="the-code" data-astro-cid-xvrfupwn>The code</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#benchmark" data-toc-link="benchmark" data-astro-cid-xvrfupwn>Benchmark</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#worth-it" data-toc-link="worth-it" data-astro-cid-xvrfupwn>Worth it?</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#references" data-toc-link="references" data-astro-cid-xvrfupwn>References</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

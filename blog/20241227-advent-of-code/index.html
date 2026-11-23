@@ -1,0 +1,235 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Finishing Advent of Code 2024</title><meta name="description" content="..by not doing my OSDev project."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20241227-advent-of-code" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Finishing Advent of Code 2024</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-12-27T00:00:00.000Z" data-astro-cid-yvbahnfj>Dec 27, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/General/" class="meta-tag" data-astro-cid-yvbahnfj>#General</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#interesting-problems" data-toc-link="interesting-problems" data-astro-cid-xvrfupwn>Interesting problems</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-12---garden-groups" data-toc-link="day-12---garden-groups" data-astro-cid-xvrfupwn>Day 12 - Garden Groups</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-14---restroom-redoubt" data-toc-link="day-14---restroom-redoubt" data-astro-cid-xvrfupwn>Day 14 - Restroom Redoubt</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-17---chronospatial-computer" data-toc-link="day-17---chronospatial-computer" data-astro-cid-xvrfupwn>Day 17 - Chronospatial Computer</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-21---keypad-conundrum" data-toc-link="day-21---keypad-conundrum" data-astro-cid-xvrfupwn>Day 21 - Keypad Conundrum</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-23---lan-party" data-toc-link="day-23---lan-party" data-astro-cid-xvrfupwn>Day 23 - LAN Party</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-24---crossed-wires" data-toc-link="day-24---crossed-wires" data-astro-cid-xvrfupwn>Day 24 - Crossed Wires</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-25---code-chronicle" data-toc-link="day-25---code-chronicle" data-astro-cid-xvrfupwn>Day 25 - Code Chronicle</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <p>So yeah, this was my first participation in the Advent of Code, despite knowing
+the event from few years ago. This distracted me from doing the OSDev project,
+in a good way, because I feel I need to brush up my problem solving skills
+(iykyk). All of the source code of my solutions can be seen
+<a href="https://github.com/firmanhp/aoc2024">here</a>.</p>
+<p><img src="/assets/20241227-advent-of-code/img/50_stars.png" alt=""></p>
+<p>While solving these puzzles, I went “crazy” writing the codes for it. By
+“crazy”, I attempted several stuffs that are new to me, in a sense that I never
+implemented myself (only saw the idea during my work, or reading someone’s
+code). For example, I wrote a
+<a href="https://github.com/firmanhp/aoc2024/blob/main/util/vector_2d.h">Vector2D</a> class
+because I didn’t like the idea of <code>std::vector&#x3C;std::vector&#x3C;T>></code>, so I think this
+is an opportunity for me do make a 2D dynamic sized array. Another one, is I
+made a
+<a href="https://github.com/firmanhp/aoc2024/blob/main/util/thread_pool.h">ThreadPool</a>
+class so my bruteforce solutions can work using multiple cores. Not so
+interesting stuff, I agree - but it’s a good learning experience for me. I think
+I missed an opportunity to make my code run on GPU, for more fast bruteforces…</p>
+<h2 id="interesting-problems">Interesting problems<a class="heading-anchor" aria-label="Link to section" href="#interesting-problems">#</a></h2>
+<p>I listed problems that were interesting to me. Mostly because the solving needs
+to be more creative than solving other “competitive programming” problems. Since
+all part 1s of the problem are relatively simpler than the part 2, I am going to
+list only part 2 of the problems.</p>
+<h3 id="day-12---garden-groups">Day 12 - Garden Groups<a class="heading-anchor" aria-label="Link to section" href="#day-12---garden-groups">#</a></h3>
+<p>The part 2 of this problem will ask us to count the number of sides, in addition
+of its area. It is really tricky to count the sides of one line, for example
+<code>EEEEE</code> is 4 sides because it forms a rectangle, and this shape forms 12 sides.</p>
+<div class="code-block" data-code-block="" data-language="text"><div class="code-block-header"><span class="code-lang">text</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy text code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>EEEEE</span></span>
+<span class="line"><span>E</span></span>
+<span class="line"><span>EEEEE</span></span>
+<span class="line"><span>E</span></span>
+<span class="line"><span>EEEEE</span></span></code></pre></div>
+<p>To make the above shape easier, we can “scale up” the shape, say scale it up 2x.</p>
+<div class="code-block" data-code-block="" data-language="text"><div class="code-block-header"><span class="code-lang">text</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy text code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>EEEEEEEEEE</span></span>
+<span class="line"><span>EEEEEEEEEE</span></span>
+<span class="line"><span>EE</span></span>
+<span class="line"><span>EE</span></span>
+<span class="line"><span>EEEEEEEEEE</span></span>
+<span class="line"><span>EEEEEEEEEE</span></span>
+<span class="line"><span>EE</span></span>
+<span class="line"><span>EE</span></span>
+<span class="line"><span>EEEEEEEEEE</span></span>
+<span class="line"><span>EEEEEEEEEE</span></span></code></pre></div>
+<p>Now, to count the sides, we can traverse over the perimeter (you should have the
+logic ready from part 1), and count how many we have to turn left/right
+(depending where you start) until we reach the starting position.</p>
+<h3 id="day-14---restroom-redoubt">Day 14 - Restroom Redoubt<a class="heading-anchor" aria-label="Link to section" href="#day-14---restroom-redoubt">#</a></h3>
+<p>I didn’t quite like this problem because the problem mentioned a vague statement
+about “it formed a christmas tree”. It didn’t say what the christmas tree would
+look like at all. I guess that’s just me. I looked up reddit (sorry) and kinda
+got spoiled on what it looks like. So I snatched some open source image library
+<code>CImg</code> and compiled every positions into each png file, and found this:</p>
+<p><img src="/assets/20241227-advent-of-code/img/restroom_redoubt.png" alt=""></p>
+<h3 id="day-17---chronospatial-computer">Day 17 - Chronospatial Computer<a class="heading-anchor" aria-label="Link to section" href="#day-17---chronospatial-computer">#</a></h3>
+<p>I believe this is the first problem where basically requires you to manually
+inspect the input. I kinda didn’t like this approach because that means my
+solution would be not general. At first I actually did a bruteforce, and after
+several millions runs I realize it would take years to solve it. Took a look at
+the input, and for my version of the input, it was consuming the data in 3 bit
+chunks. Made my bruteforce really efficient based on that observation.</p>
+<h3 id="day-21---keypad-conundrum">Day 21 - Keypad Conundrum<a class="heading-anchor" aria-label="Link to section" href="#day-21---keypad-conundrum">#</a></h3>
+<p>There are two parts that were hard in this problem: Counting how many robots are
+in the chain, and of course, the problem itself. One key observation here is (I
+think) we can only do optimum movement from key A to key B by moving horizontal
+first, then vertical, or vice versa (while making sure it doesn’t touch the gap
+keys). Another observation is, if you can split the commands into chunks of
+(robot X: move from key A to key B, then press it), then we can make it into a
+dynamic programming problem.</p>
+<h3 id="day-23---lan-party">Day 23 - LAN Party<a class="heading-anchor" aria-label="Link to section" href="#day-23---lan-party">#</a></h3>
+<p>The part 2 of the problem basically asked for the maximum clique in the given
+graph. I thought I was going to consult to some state of the art clique finding
+solutions, but apparently my bruteforce with the help of my ThreadPool class,
+found a clique after I finished watching a single YouTube video. I submitted
+that clique, and it passed. Really lucky.</p>
+<p><img src="/assets/20241227-advent-of-code/img/lan_party.jpeg" alt=""></p>
+<h3 id="day-24---crossed-wires">Day 24 - Crossed Wires<a class="heading-anchor" aria-label="Link to section" href="#day-24---crossed-wires">#</a></h3>
+<p>The part 2 asked to fix some swapped register results. I was quite stumped by
+the amount of operations in it. Reddit again (sorry) gave a hint that it was
+actually a <a href="https://www.sciencedirect.com/topics/computer-science/ripple-carry-adder">Ripple Carry
+Adder</a>.
+Huh, I thought it was going to be some kind of compressed connections. I guess
+I’m just stupid for not checking by myself first. I messed around with the
+input, checking for some expected patterns for the adder circuit, and found it.
+I made a “diagnostics” code that will crash if it sees something that did not
+follow my observed pattern. Swapped the registers manually, and found all of
+them.</p>
+<h3 id="day-25---code-chronicle">Day 25 - Code Chronicle<a class="heading-anchor" aria-label="Link to section" href="#day-25---code-chronicle">#</a></h3>
+<p>This part 2 of the problem can only be passed if you have all the stars from the
+previous problems.</p>
+<p><img src="/assets/20241227-advent-of-code/img/code_chronicle.jpeg" alt=""></p>
+<p>It actually reminded me of Splapp-me-do’s <a href="https://en.wikipedia.org/wiki/The_Impossible_Quiz">The Impossible
+Quiz</a>. In the final question,
+it asked you to use all the skips that were available in the game. The skip
+button allows you to skip one question, but it was actually a trap because if
+you use one of those, then you won’t be able to get past the final question.
+Getting those skip buttons were not easy as well.</p>
+<p><img src="/assets/20241227-advent-of-code/img/impossible_quiz.jpg" alt=""></p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#interesting-problems" data-toc-link="interesting-problems" data-astro-cid-xvrfupwn>Interesting problems</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-12---garden-groups" data-toc-link="day-12---garden-groups" data-astro-cid-xvrfupwn>Day 12 - Garden Groups</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-14---restroom-redoubt" data-toc-link="day-14---restroom-redoubt" data-astro-cid-xvrfupwn>Day 14 - Restroom Redoubt</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-17---chronospatial-computer" data-toc-link="day-17---chronospatial-computer" data-astro-cid-xvrfupwn>Day 17 - Chronospatial Computer</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-21---keypad-conundrum" data-toc-link="day-21---keypad-conundrum" data-astro-cid-xvrfupwn>Day 21 - Keypad Conundrum</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-23---lan-party" data-toc-link="day-23---lan-party" data-astro-cid-xvrfupwn>Day 23 - LAN Party</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-24---crossed-wires" data-toc-link="day-24---crossed-wires" data-astro-cid-xvrfupwn>Day 24 - Crossed Wires</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#day-25---code-chronicle" data-toc-link="day-25---code-chronicle" data-astro-cid-xvrfupwn>Day 25 - Code Chronicle</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

@@ -1,0 +1,306 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GitHub Pages: Hosting Jekyll Site from a Separate Directory</title><meta name="description" content="aka How I hosted this site."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20240908-jekyll-separate-directory" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>GitHub Pages: Hosting Jekyll Site from a Separate Directory</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-09-08T08:00:00.000Z" data-astro-cid-yvbahnfj>Sep 8, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/github/" class="meta-tag" data-astro-cid-yvbahnfj>#github</a><a href="/blog/tags/jekyll/" class="meta-tag" data-astro-cid-yvbahnfj>#jekyll</a><a href="/blog/tags/static-site/" class="meta-tag" data-astro-cid-yvbahnfj>#static-site</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#repository-settings" data-toc-link="repository-settings" data-astro-cid-xvrfupwn>Repository settings</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#environment-settings" data-toc-link="environment-settings" data-astro-cid-xvrfupwn>Environment settings</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#github-pages-settings" data-toc-link="github-pages-settings" data-astro-cid-xvrfupwn>GitHub Pages settings</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-goal" data-toc-link="the-goal" data-astro-cid-xvrfupwn>The Goal</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#constructing" data-toc-link="constructing" data-astro-cid-xvrfupwn>Constructing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#landing-page" data-toc-link="landing-page" data-astro-cid-xvrfupwn>Landing Page</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#blog-page" data-toc-link="blog-page" data-astro-cid-xvrfupwn>Blog Page</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#deploying" data-toc-link="deploying" data-astro-cid-xvrfupwn>Deploying</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#building-the-blog" data-toc-link="building-the-blog" data-astro-cid-xvrfupwn>Building the blog</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#building-the-landing-pages" data-toc-link="building-the-landing-pages" data-astro-cid-xvrfupwn>“Building” the landing pages</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#merging-and-deploying" data-toc-link="merging-and-deploying" data-astro-cid-xvrfupwn>Merging and Deploying</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <div class="callout callout-warning" data-callout="warning"><p>This blog site is no longer built with Jekyll. I’m leaving this here for archive purposes.</p></div>
+<p>When building this blog, I didn’t want to put this on the root directory, so I can put more custom static pages in case I need it. At the end I managed to host this blog under <code>/blog</code> directory. This post is to list what I did:</p>
+<h2 id="repository-settings">Repository settings<a class="heading-anchor" aria-label="Link to section" href="#repository-settings">#</a></h2>
+<p>The repository for this blog can be accessed <a href="https://github.com/firmanhp/firmanhp.github.io">here</a>.</p>
+<h3 id="environment-settings">Environment settings<a class="heading-anchor" aria-label="Link to section" href="#environment-settings">#</a></h3>
+<p>I planned to have a separate branch as the source of deployment called <code>live</code>.
+I created the environment setting called <code>github-pages</code>.</p>
+<figure class="post-figure"><img src="/assets/20240908-jekyll-separate-directory/img/environment-settings.png" alt="Environment settings"><figcaption class="image-caption">
+Environment settings for <code>github-pages</code>.</figcaption></figure>
+<h3 id="github-pages-settings">GitHub Pages settings<a class="heading-anchor" aria-label="Link to section" href="#github-pages-settings">#</a></h3>
+<p>I am using a custom GitHub workflow to deploy my pages, which I will explain later.</p>
+<figure class="post-figure"><img src="/assets/20240908-jekyll-separate-directory/img/pages-settings.png" alt="GitHub Pages settings"><figcaption class="image-caption">
+Pages settings for the repository.</figcaption></figure>
+<h2 id="the-goal">The Goal<a class="heading-anchor" aria-label="Link to section" href="#the-goal">#</a></h2>
+<p>How GitHub Pages works is it accepts a single artifact containing all your static files
+and will display it the same way your organize the artifact. You’d want to have your
+artifact to contain this structure:</p>
+<div class="code-block" data-code-block="" data-language="text"><div class="code-block-header"><span class="code-lang">text</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy text code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>(artifact)</span></span>
+<span class="line"><span>|</span></span>
+<span class="line"><span>|-- (root directory pages)</span></span>
+<span class="line"><span>|-- blog/</span></span>
+<span class="line"><span>|   |-- (your static site)</span></span>
+<span class="line"><span>|-- my_other_site/</span></span>
+<span class="line"><span>|   |-- (your other static site)</span></span>
+<span class="line"><span>|-- my_other_site2/</span></span>
+<span class="line"><span>|   |-- (your other static site)</span></span>
+<span class="line"><span>|-- ...</span></span></code></pre></div>
+<p>In my case, I currently have 1 <code>blog/</code> site, and a couple of HTML pages for the landing
+pages (<code>index.html</code> and <code>404.html</code>) located in <code>landing/</code>. My finalized artifact would
+look like this:</p>
+<div class="code-block" data-code-block="" data-language="text"><div class="code-block-header"><span class="code-lang">text</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy text code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="text"><code><span class="line"><span>(artifact)</span></span>
+<span class="line"><span>|</span></span>
+<span class="line"><span>|-- index.html</span></span>
+<span class="line"><span>|-- 404.html</span></span>
+<span class="line"><span>|-- blog/</span></span>
+<span class="line"><span>|   |-- (my blog Jekyll site project)</span></span></code></pre></div>
+<p>In the above case, when opening the root directory, we will be greeted with a page from
+<code>index.html</code> and be given <code>404.html</code> when the user accesses a nonexistent page. My blog
+will reside inside the <code>blog/</code> directory.</p>
+<h2 id="constructing">Constructing<a class="heading-anchor" aria-label="Link to section" href="#constructing">#</a></h2>
+<h3 id="landing-page">Landing Page<a class="heading-anchor" aria-label="Link to section" href="#landing-page">#</a></h3>
+<p>Everything is quite simple here. I just wrote few lines of HTML for these pages. They are
+located in the <a href="https://github.com/firmanhp/firmanhp.github.io/tree/main/landing"><code>landing/</code></a>
+directory in the repo. I may replace these with another static site packages later.</p>
+<h3 id="blog-page">Blog Page<a class="heading-anchor" aria-label="Link to section" href="#blog-page">#</a></h3>
+<p>This is a bit more complex since I decided to use <a href="https://github.com/cotes2020/jekyll-theme-chirpy"><code>jekyll-theme-chirpy</code></a>.
+I grabbed a starter project from the <a href="https://github.com/cotes2020/jekyll-theme-chirpy"><code>chirpy-starter</code> repo</a>
+and slightly modified the _config.yml. I placed the whole project inside <code>blog/</code> directory of
+my repo. Most important parts of the modification were:</p>
+<div class="code-block" data-code-block="" data-language="yaml"><div class="code-block-header"><span class="code-lang">yaml</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy yaml code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"><span style="color:#6A737D;--shiki-dark:#768390"># The base URL of your site</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">baseurl</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"/blog"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390"># Fill in the protocol &#x26; hostname for your site.</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390"># E.g. 'https://username.github.io', note that it does not end with a '/'.</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390"># NOTE: I actually don't know how they used this, since every links that I</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">#       saw actually did not have this embedded.</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">url</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"https://firmanhp.github.io"</span></span></code></pre></div>
+<p>After that, I try to run it locally using the provided scripts insied <code>tools/</code> directory to
+see if everything works normally, and every pages are located within <code>/blog</code> directory.</p>
+<h2 id="deploying">Deploying<a class="heading-anchor" aria-label="Link to section" href="#deploying">#</a></h2>
+<p>The <code>chirpy-starter</code> repo conveniently provides a <a href="https://github.com/cotes2020/chirpy-starter/blob/main/.github/workflows/pages-deploy.yml">GitHub workflow configuration</a>.
+However, I had to do some modifications to make it run properly on my repo, mainly:</p>
+<h3 id="building-the-blog">Building the blog<a class="heading-anchor" aria-label="Link to section" href="#building-the-blog">#</a></h3>
+<p>Hardcoding <code>/blog</code> instead of using <code>actions/configure-pages</code> output. I didn’t know how that action works,
+probably it fetches some parameters in the repository settings that I forgot to set, and by then
+<code>{{steps.pages.outputs.base_path}}</code> outputs an empty string for me.</p>
+<div class="code-block" data-code-block="" data-language="yaml"><div class="code-block-header"><span class="code-lang">yaml</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy yaml code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">jobs</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">  blog_build</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    runs-on</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">ubuntu-latest</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    defaults</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">      run</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        working-directory</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">./blog</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    steps</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Checkout</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/checkout@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          fetch-depth</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Setup Ruby</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">ruby/setup-ruby@v1</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          working-directory</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">./blog</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          ruby-version</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">3.3</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          bundler-cache</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">true</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Build site</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        run</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">bundle exec jekyll b -d "_site/blog"</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        env</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          JEKYLL_ENV</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"production"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Test site</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        run</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#D73A49;--shiki-dark:#F47067">|</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#96D0FF">          bundle exec htmlproofer _site \</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#96D0FF">            \-\-disable-external \</span></span>
+<span class="line"><span style="color:#032F62;--shiki-dark:#96D0FF">            \-\-ignore-urls "/^http:\/\/127.0.0.1/,/^http:\/\/0.0.0.0/,/^http:\/\/localhost/"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Upload build artifact</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/upload-artifact@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">site_blog</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          path</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"./blog/_site"</span></span></code></pre></div>
+<h3 id="building-the-landing-pages">“Building” the landing pages<a class="heading-anchor" aria-label="Link to section" href="#building-the-landing-pages">#</a></h3>
+<p>For the landing page, I made a separate job that just wraps these HTML files into one artifact.
+I could’ve merged this job into the same job above though~~, but I like to waste GitHub’s bandwidth.~~</p>
+<div class="code-block" data-code-block="" data-language="yaml"><div class="code-block-header"><span class="code-lang">yaml</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy yaml code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">jobs</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">  landing_build</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    runs-on</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">ubuntu-latest</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    steps</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Checkout</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/checkout@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          fetch-depth</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Upload build artifact</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/upload-artifact@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">site_landing</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          path</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"./landing"</span></span>
+<span class="line"></span></code></pre></div>
+<h3 id="merging-and-deploying">Merging and Deploying<a class="heading-anchor" aria-label="Link to section" href="#merging-and-deploying">#</a></h3>
+<p>Since we have two packages each wrapped in the artifact, we will extract these two into
+the same directory, and the we upload a new artifact that contains the structure as
+described in <a href="#the-goal">the goal</a>. GitHub provides a convenient Action called
+<code>actions/upload-pages-artifact</code> and <code>actions/deploy-pages</code> that constructs a
+suitable artifact for GitHub Pages to deploy. I also used <code>actions/configure-pages</code> here,
+just in case.</p>
+<div class="code-block" data-code-block="" data-language="yaml"><div class="code-block-header"><span class="code-lang">yaml</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy yaml code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="yaml"><code><span class="line"></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">jobs</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">  deploy</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    environment</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">      name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">github-pages</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    runs-on</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">ubuntu-latest</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    needs</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: [</span><span style="color:#032F62;--shiki-dark:#96D0FF">blog_build</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#032F62;--shiki-dark:#96D0FF">landing_build</span><span style="color:#24292E;--shiki-dark:#ADBAC7">]</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">    steps</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Setup Pages</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        id</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">pages</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/configure-pages@v4</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Download blog artifact</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/download-artifact@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">site_blog</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          path</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"./BUILD/_site"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Download landing page artifact</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/download-artifact@v4</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">site_landing</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          path</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"./BUILD/_site"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Upload github-pages artifact</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/upload-pages-artifact@v3</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        with</span><span style="color:#24292E;--shiki-dark:#ADBAC7">:</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">          path</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">"./BUILD/_site"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      - </span><span style="color:#22863A;--shiki-dark:#8DDB8C">name</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">Deploy to GitHub Pages</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        id</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">deployment</span></span>
+<span class="line"><span style="color:#22863A;--shiki-dark:#8DDB8C">        uses</span><span style="color:#24292E;--shiki-dark:#ADBAC7">: </span><span style="color:#032F62;--shiki-dark:#96D0FF">actions/deploy-pages@v4</span></span></code></pre></div>
+<h2 id="conclusion">Conclusion<a class="heading-anchor" aria-label="Link to section" href="#conclusion">#</a></h2>
+<p><strong>Was it too complicated?</strong> I guess, but it’s a bit of a fun adventure for me to refresh back
+my knowledge on these CI/CD interfaces. The last time I used this kind of thing was
+during my college years, and after graduating I’ve been working on embedded devices
+and never touched these again. As far as I remember, these interfaces used to be not free
+(or very limited), and my university hosted their own GitLab so they can give out free
+shared runners for the students to use it.</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#repository-settings" data-toc-link="repository-settings" data-astro-cid-xvrfupwn>Repository settings</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#environment-settings" data-toc-link="environment-settings" data-astro-cid-xvrfupwn>Environment settings</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#github-pages-settings" data-toc-link="github-pages-settings" data-astro-cid-xvrfupwn>GitHub Pages settings</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-goal" data-toc-link="the-goal" data-astro-cid-xvrfupwn>The Goal</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#constructing" data-toc-link="constructing" data-astro-cid-xvrfupwn>Constructing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#landing-page" data-toc-link="landing-page" data-astro-cid-xvrfupwn>Landing Page</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#blog-page" data-toc-link="blog-page" data-astro-cid-xvrfupwn>Blog Page</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#deploying" data-toc-link="deploying" data-astro-cid-xvrfupwn>Deploying</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#building-the-blog" data-toc-link="building-the-blog" data-astro-cid-xvrfupwn>Building the blog</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#building-the-landing-pages" data-toc-link="building-the-landing-pages" data-astro-cid-xvrfupwn>“Building” the landing pages</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#merging-and-deploying" data-toc-link="merging-and-deploying" data-astro-cid-xvrfupwn>Merging and Deploying</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#conclusion" data-toc-link="conclusion" data-astro-cid-xvrfupwn>Conclusion</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 

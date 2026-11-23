@@ -1,0 +1,443 @@
+<!DOCTYPE html><html lang="en" data-theme="dark"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Project log: on linker script debugging</title><meta name="description" content="I messed up because of a blind copy paste (again). Rust's panic saved me this time."><link rel="icon" type="image/svg+xml" href="/favicon.svg"><link rel="alternate" type="application/rss+xml" title="Blog RSS" href="/blog/rss.xml"><script>(function(){try{var k='firmanhp-theme';var s=localStorage.getItem(k);var t=(s==='light'||s==='dark')?s:'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.Bn2GOjwk.css">
+<link rel="stylesheet" href="/blog/_astro/_slug_.C-KcUCIp.css"></head> <body> <header class="site-header" data-astro-cid-2d3daudl> <div class="site-shell header-inner" data-astro-cid-2d3daudl> <nav class="site-nav" aria-label="Primary" data-astro-cid-2d3daudl> <a href="/" class="nav-link home-link" data-astro-cid-2d3daudl> <span class="brand-dot" aria-hidden="true" data-astro-cid-2d3daudl></span> <span data-astro-cid-2d3daudl>Home</span> </a> <a href="/blog/" class="nav-link active" data-astro-cid-2d3daudl>Blog</a> </nav> <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle color theme" data-astro-cid-eydksdys> <span data-theme-label data-astro-cid-eydksdys>Light</span> </button> <script>(function(){const storageKey = "firmanhp-theme";
+
+  (function () {
+    const buttons = document.querySelectorAll('[data-theme-toggle]');
+    function syncLabels(theme) {
+      const nextLabel = theme === 'dark' ? 'Light' : 'Dark';
+      buttons.forEach((btn) => {
+        const label = btn.querySelector('[data-theme-label]');
+        if (label) {
+          label.textContent = nextLabel;
+        }
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      });
+    }
+    const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+    syncLabels(current);
+    buttons.forEach((btn) => {
+      if (btn.dataset.bound === 'true') {
+        return;
+      }
+      btn.dataset.bound = 'true';
+      btn.addEventListener('click', () => {
+        const active = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+        const next = active === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem(storageKey, next);
+        } catch (_err) {}
+        syncLabels(next);
+      });
+    });
+  })();
+})();</script>  </div> </header>  <main class="site-main">  <div class="post-layout" data-astro-cid-yvbahnfj> <article class="post-article" data-pagefind-body data-post-slug="20241010-linker-debugging" data-astro-cid-yvbahnfj> <header class="post-header" data-astro-cid-yvbahnfj> <p class="back-link" data-astro-cid-yvbahnfj><a href="/blog/" data-astro-cid-yvbahnfj>← All posts</a></p> <h1 data-astro-cid-yvbahnfj>Project log: on linker script debugging</h1> <div class="post-meta" data-astro-cid-yvbahnfj> <time datetime="2024-10-10T00:00:00.000Z" data-astro-cid-yvbahnfj>Oct 10, 2024</time> <a href="/blog/lang/en/" class="meta-badge" data-astro-cid-yvbahnfj>EN</a> <a href="/blog/tags/systems-programming/" class="meta-tag" data-astro-cid-yvbahnfj>#systems-programming</a><a href="/blog/tags/rust/" class="meta-tag" data-astro-cid-yvbahnfj>#rust</a><a href="/blog/tags/binary-analysis/" class="meta-tag" data-astro-cid-yvbahnfj>#binary-analysis</a> </div> </header> <details class="post-toc-mobile" data-astro-cid-yvbahnfj> <summary data-astro-cid-yvbahnfj>Table of contents</summary> <div class="post-toc-mobile-body" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#background" data-toc-link="background" data-astro-cid-xvrfupwn>Background</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#printing-an-integer" data-toc-link="printing-an-integer" data-astro-cid-xvrfupwn>Printing an integer</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-stack" data-toc-link="the-stack" data-astro-cid-xvrfupwn>The Stack</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-problem" data-toc-link="the-problem" data-astro-cid-xvrfupwn>The problem</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#working-on-my-panic-handler" data-toc-link="working-on-my-panic-handler" data-astro-cid-xvrfupwn>Working on my Panic handler</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#root-causing" data-toc-link="root-causing" data-astro-cid-xvrfupwn>Root causing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#fixing" data-toc-link="fixing" data-astro-cid-xvrfupwn>Fixing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-catch" data-toc-link="the-catch" data-astro-cid-xvrfupwn>The catch</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#result" data-toc-link="result" data-astro-cid-xvrfupwn>Result</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#lessons-learned" data-toc-link="lessons-learned" data-astro-cid-xvrfupwn>Lessons learned</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#question-left-to-be-answered" data-toc-link="question-left-to-be-answered" data-astro-cid-xvrfupwn>Question left to be answered</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </div> </details> <div class="post-prose" data-astro-cid-yvbahnfj> <h2 id="background">Background<a class="heading-anchor" aria-label="Link to section" href="#background">#</a></h2>
+<p>I finally made UART working on my bare metal Raspberry Pi project. Despite the
+datasheet saying that the baud rate is derived from a certain base clock, which
+I don’t know what was the actual clock rate, it actually worked out of the box
+using 112500bps. I guess that was a lucky shot. For my sanity I proceeded to
+make a working output mechanism first before I mess with other peripherals.</p>
+<h3 id="printing-an-integer">Printing an integer<a class="heading-anchor" aria-label="Link to section" href="#printing-an-integer">#</a></h3>
+<p>How do you print an integer? Convert it to string first? But I don’t have a
+string data structure and memory management yet. I had to manually print it,
+digit by digit. How am I going to do that?</p>
+<p>Well, there’s this quite common fact that in base 10 decimal system, doing
+<code>N mod 10</code> gives you the last digit of the number, and <code>N div 10</code> shifts the
+number to the right. Repeat that until you achieve 0, then you can print the
+digits one by one.</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> pl011_putint</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> i64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    pl011_putc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">'0'</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    return</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> is_negative</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> bool</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> is_negative {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    int </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#24292E;--shiki-dark:#ADBAC7">int;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Fetch digits</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  while</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> digit</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (int </span><span style="color:#D73A49;--shiki-dark:#F47067">%</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    pl011_putc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#032F62;--shiki-dark:#96D0FF">'0'</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> digit);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    int </span><span style="color:#D73A49;--shiki-dark:#F47067">/=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>This gives you the printed number, but in reverse. How do we reverse it back? If
+you are good in math, you may figure out how to print from the most significant
+digit. However, I am not good in math, so as a software engineer, I decided to
+overengineer it using a stack data structure (<em>why not?</em> 😂). If I put the
+digits into the stack, then popping it back gives you the digit in reverse
+order, which means you get them in the correct order.</p>
+<h3 id="the-stack">The Stack<a class="heading-anchor" aria-label="Link to section" href="#the-stack">#</a></h3>
+<p>I don’t have dynamic memory allocation yet so I made it based on a fixed size
+array.</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> struct</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Stack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> N</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">></span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">where</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> T</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Copy</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  data</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [</span><span style="color:#6F42C1;--shiki-dark:#F69D50">MaybeUninit</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">>; </span><span style="color:#6F42C1;--shiki-dark:#F69D50">N</span><span style="color:#24292E;--shiki-dark:#ADBAC7">],</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  head</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">,</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">#[allow(dead_code)]</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">impl</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#D73A49;--shiki-dark:#F47067">const</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> N</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7">> </span><span style="color:#6F42C1;--shiki-dark:#F69D50">Stack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#6F42C1;--shiki-dark:#F69D50">N</span><span style="color:#24292E;--shiki-dark:#ADBAC7">> </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">where</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> T</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> Copy</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> size</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#F69D50"> usize</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">head }</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> empty</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#F69D50"> bool</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> push</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;mut</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> self</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, data</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) { </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">size</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">>=</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> N</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">panic!</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"Stack overflow"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">); }</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">    self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">data[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">head] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> MaybeUninit</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">></span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">new</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(data);</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">    self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">head </span><span style="color:#D73A49;--shiki-dark:#F47067">+=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> pop</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;mut</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> self</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#6F42C1;--shiki-dark:#F69D50"> T</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    if</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">empty</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() { </span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">panic!</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"Stack is empty"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">); }</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">    self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">head </span><span style="color:#D73A49;--shiki-dark:#F47067">-=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">    // TODO: drop?</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">data[</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">self</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#24292E;--shiki-dark:#ADBAC7">head]</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">assume_init</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> const</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> new</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() </span><span style="color:#D73A49;--shiki-dark:#F47067">-></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> Self</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">    Self</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      data</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [</span><span style="color:#6F42C1;--shiki-dark:#F69D50">MaybeUninit</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">T</span><span style="color:#24292E;--shiki-dark:#ADBAC7">></span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">uninit</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(); </span><span style="color:#6F42C1;--shiki-dark:#F69D50">N</span><span style="color:#24292E;--shiki-dark:#ADBAC7">],</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">      head</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>With this I should achieve a proper integer printing:</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">static</span><span style="color:#D73A49;--shiki-dark:#F47067"> mut</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> CHARBUF</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> container</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Stack</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, 256> </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    container</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#F69D50">Stack</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#24292E;--shiki-dark:#ADBAC7">&#x3C;</span><span style="color:#6F42C1;--shiki-dark:#F69D50">u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">, </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">256</span><span style="color:#24292E;--shiki-dark:#ADBAC7">></span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">new</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> pl011_flush</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Print digits</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    while</span><span style="color:#D73A49;--shiki-dark:#F47067"> !</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">CHARBUF</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">empty</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">      pl011_putc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">CHARBUF</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pop</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> pl011_putint</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">mut</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> i64</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    pl011_putc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">'0'</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    return</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">CHARBUF</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">'-'</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">); }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    int </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#D73A49;--shiki-dark:#F47067"> -</span><span style="color:#24292E;--shiki-dark:#ADBAC7">int;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">  // Fetch digits</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  while</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> int </span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 0</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> {</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    let</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> digit</span><span style="color:#D73A49;--shiki-dark:#F47067">:</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#D73A49;--shiki-dark:#F47067"> =</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (int </span><span style="color:#D73A49;--shiki-dark:#F47067">%</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    unsafe</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">CHARBUF</span><span style="color:#D73A49;--shiki-dark:#F47067">.</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">push</span><span style="color:#24292E;--shiki-dark:#ADBAC7">((</span><span style="color:#032F62;--shiki-dark:#96D0FF">'0'</span><span style="color:#D73A49;--shiki-dark:#F47067"> as</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> u8</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> digit); }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    int </span><span style="color:#D73A49;--shiki-dark:#F47067">/=</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 10</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">  pl011_flush</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>The design is questionable, I just plan to make it simple first. Since it only
+runs on a single core, I didn’t care too much.</p>
+<h2 id="the-problem">The problem<a class="heading-anchor" aria-label="Link to section" href="#the-problem">#</a></h2>
+<p>I made a small test around those that I can run on my target machine.</p>
+<div class="code-block" data-code-block="" data-language="rust"><div class="code-block-header"><span class="code-lang">rust</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy rust code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="rust"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">pub</span><span style="color:#D73A49;--shiki-dark:#F47067"> fn</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB"> test_uart</span><span style="color:#24292E;--shiki-dark:#ADBAC7">() {</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_puts</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"UART Test</span><span style="color:#005CC5;--shiki-dark:#F47067">\r\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_puts</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"Hello, kernel World from Rust!</span><span style="color:#005CC5;--shiki-dark:#F47067">\r\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_puts</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"Decimal number print test (expected: 1234567890)</span><span style="color:#005CC5;--shiki-dark:#F47067">\r\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">  uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_putint</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1234567890</span><span style="color:#24292E;--shiki-dark:#ADBAC7">); </span><span style="color:#6F42C1;--shiki-dark:#F69D50">uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_puts</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#005CC5;--shiki-dark:#F47067">\r\n</span><span style="color:#032F62;--shiki-dark:#96D0FF">"</span><span style="color:#24292E;--shiki-dark:#ADBAC7">);</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  loop</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> { </span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_putc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">uart</span><span style="color:#D73A49;--shiki-dark:#F47067">::</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">pl011_getc</span><span style="color:#24292E;--shiki-dark:#ADBAC7">());</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Running it, I got:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>UART Test</span></span>
+<span class="line"><span>Hello, kernel World from Rust!</span></span>
+<span class="line"><span>Decimal number print test (expected: 1234567890)</span></span></code></pre></div>
+<p>Umm… Where’s my number? Did my program stuck in an infinite loop somewhere?
+Did it go panic?</p>
+<h3 id="working-on-my-panic-handler">Working on my Panic handler<a class="heading-anchor" aria-label="Link to section" href="#working-on-my-panic-handler">#</a></h3>
+<p>At this point I started to revamp my panic handling code to print some helpful
+messages. Apparently the PanicInfo has a statically sized string containing the
+message. I also tried to print the code pointer, and the line number (in reverse
+order).</p>
+<p>Luckily (and unluckily) I get this message:</p>
+<div class="code-block" data-code-block="" data-language="plaintext"><div class="code-block-header"><span class="code-lang">plaintext</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy plaintext code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="plaintext"><code><span class="line"><span>UART Test</span></span>
+<span class="line"><span>Hello, kernel World from Rust!</span></span>
+<span class="line"><span>Decimal number print test (expected: 1234567890)</span></span>
+<span class="line"><span>PANIC: No message</span></span>
+<span class="line"><span>src/container/stack.rs</span></span>
+<span class="line"><span>03</span></span></code></pre></div>
+<p>So it was a panic. The line number pointed to this line:
+<code>self.data[self.head] = MaybeUninit::&#x3C;T>::new(data);</code>.
+Where did it go wrong? Why is there no message in the panic? Is there a bounds
+check in my bare metal program? Or is my usage of <code>MaybeUninit::&#x3C;T>::new</code> wrong?
+Being very new to Rust, I decided to inspect the binary output of the compiled
+ELF using ghidra (<em>or it’s just me seeing this as an opportunity to learn
+ghidra</em>).</p>
+<div class="code-block" data-code-block="" data-language="c"><div class="code-block-header"><span class="code-lang">c</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy c code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="c"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">void</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> __rustcall osdev::container::stack::Stack</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8,_256</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7">::push</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8,_256</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(Stack</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8,_256</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">self,u8 data)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">{</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  usize uVar1;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  Arguments AStack_50;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  Stack</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8,_256</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#D73A49;--shiki-dark:#F47067"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">local_20;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  u8 local_13;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  u8 local_12;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  u8 local_11;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  </span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  local_20 </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> self;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  local_13 </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  uVar1 </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> size</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8,_256</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(self);</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (uVar1 </span><span style="color:#D73A49;--shiki-dark:#F47067">==</span><span style="color:#D73A49;--shiki-dark:#F47067"> 0x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">100</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    core::fmt::Arguments::new_const</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">AStack_50,(</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#6F42C1;--shiki-dark:#DCBDFB">str</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">*</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) [</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">])</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x26;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">PTR_s_Stack_overflow_00086918);</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">                    /* WARNING: Subroutine does not return */</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    core::panicking::panic_fmt</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  local_12 </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  local_11 </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> data;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (</span><span style="color:#D73A49;--shiki-dark:#F47067">0x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">ff</span><span style="color:#D73A49;--shiki-dark:#F47067"> &#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> self->head) {</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">                    /* WARNING: Subroutine does not return */</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">    core::panicking::panic_bounds_check</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  self->data[self->head] </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (MaybeUninit</span><span style="color:#D73A49;--shiki-dark:#F47067">&#x3C;</span><span style="color:#24292E;--shiki-dark:#ADBAC7">u8</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7">)data;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">  if</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (self->head </span><span style="color:#D73A49;--shiki-dark:#F47067">!=</span><span style="color:#D73A49;--shiki-dark:#F47067"> 0x</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">ffffffffffffffff</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) {</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">    self->head </span><span style="color:#D73A49;--shiki-dark:#F47067">=</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> self->head </span><span style="color:#D73A49;--shiki-dark:#F47067">+</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 1</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">    return</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">  }</span></span>
+<span class="line"><span style="color:#6A737D;--shiki-dark:#768390">                    /* WARNING: Subroutine does not return */</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#DCBDFB">  core::panicking::panic_const::panic_const_add_overflow</span><span style="color:#24292E;--shiki-dark:#ADBAC7">();</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Indeed there is a bounds checking there on line 21 (<em>or I should have googled
+that up</em>). I added more checks on my <code>Stack</code> class by printing the <code>head</code> value.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">UART</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Test</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Hello,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> kernel</span><span style="color:#032F62;--shiki-dark:#96D0FF"> World</span><span style="color:#032F62;--shiki-dark:#96D0FF"> from</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Rust!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Decimal</span><span style="color:#032F62;--shiki-dark:#96D0FF"> number</span><span style="color:#032F62;--shiki-dark:#96D0FF"> print</span><span style="color:#032F62;--shiki-dark:#96D0FF"> test</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (expected: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1234567890</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">[STACKDBG] head pos: 50206640130215523641</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">PANIC:</span><span style="color:#032F62;--shiki-dark:#96D0FF"> No</span><span style="color:#032F62;--shiki-dark:#96D0FF"> message</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">src/container/stack.rs</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">03</span></span></code></pre></div>
+<p>Huh, why is my head value is a random junk value? I had explicitly put an
+initialized value on my <code>pub const fn new()</code>! What is going on?</p>
+<h3 id="root-causing">Root causing<a class="heading-anchor" aria-label="Link to section" href="#root-causing">#</a></h3>
+<p>Usually junk values are a sign of uninitialized data. I remembered that these
+static data live inside the <code>.bss</code> segment, which I thought I already filled it
+with zero at my assembly’s entry point. Additionally, explicitly initializing
+through <code>new()</code> also gave me confusion.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    //</span><span style="color:#032F62;--shiki-dark:#96D0FF"> clear</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bss</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    ldr</span><span style="color:#032F62;--shiki-dark:#96D0FF">     x5,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =__bss_start</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    ldr</span><span style="color:#032F62;--shiki-dark:#96D0FF">     w6,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =__bss_size</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">1:</span><span style="color:#032F62;--shiki-dark:#96D0FF">  cbz</span><span style="color:#032F62;--shiki-dark:#96D0FF">     w6,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 2f</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    str</span><span style="color:#032F62;--shiki-dark:#96D0FF">     xzr,</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> [x5], </span><span style="color:#6A737D;--shiki-dark:#768390">#8</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    sub</span><span style="color:#032F62;--shiki-dark:#96D0FF">     w6,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> w6,</span><span style="color:#6A737D;--shiki-dark:#768390"> #1</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    cbnz</span><span style="color:#032F62;--shiki-dark:#96D0FF">    w6,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 1b</span></span></code></pre></div>
+<p>These <code>__bss_start</code> and <code>__bss_size</code> symbol was generated through this part of
+linker script:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">__bss_start</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">.bss</span><span style="color:#032F62;--shiki-dark:#96D0FF"> :</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">{</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    bss</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    *(.bss</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">.</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ALIGN</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">4096</span><span style="color:#24292E;--shiki-dark:#ADBAC7">); </span><span style="color:#6F42C1;--shiki-dark:#F69D50">/*</span><span style="color:#032F62;--shiki-dark:#96D0FF"> align</span><span style="color:#032F62;--shiki-dark:#96D0FF"> to</span><span style="color:#032F62;--shiki-dark:#96D0FF"> page</span><span style="color:#032F62;--shiki-dark:#96D0FF"> size</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> *</span><span style="color:#032F62;--shiki-dark:#96D0FF">/</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">__bss_end</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">__bss_size</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_end</span><span style="color:#032F62;--shiki-dark:#96D0FF"> -</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_start</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span></code></pre></div>
+<div class="callout callout-hint" data-callout="hint"><p>Take a guess: I just copy pasted that code. What’s wrong with the code?</p></div>
+<p>Taking a look of the <code>objdump</code> of the binary:</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">target/aarch64-unknown-none/debug/osdev:</span><span style="color:#032F62;--shiki-dark:#96D0FF">	file</span><span style="color:#032F62;--shiki-dark:#96D0FF"> format</span><span style="color:#032F62;--shiki-dark:#96D0FF"> elf64-littleaarch64</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">SYMBOL</span><span style="color:#032F62;--shiki-dark:#96D0FF"> TABLE:</span></span>
+<span class="line"><span style="color:#005CC5;--shiki-dark:#6CB6FF">...</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000080000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .text</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> _start</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .rodata</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_start</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">       *</span><span style="color:#032F62;--shiki-dark:#96D0FF">ABS</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_size</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_end</span></span></code></pre></div>
+<p>Oh, look. my <code>__bss_size</code> points to a value 0, and my <code>__bss_start</code> -
+<code>__bss_end</code> points to the same value. So this means my <code>.bss</code> zeroing logic
+didn’t work. That explains the <code>head</code> value picking up garbage values. The RAM
+was uninitialized.</p>
+<p>Taking another look on the dump, it turns out the <code>.bss</code> section on my linker
+script did not pick up any <code>.bss</code> sections from any object files at all 😓</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> objdump -dt target/aarch64-unknown-none/debug/osdev </span><span style="color:#D73A49;--shiki-dark:#F47067">|</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> grep</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ".bss"</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">     O</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bss._ZN5osdev2io4uart7CHARBUF17hc80dca2c0e52eba2E</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000548</span><span style="color:#032F62;--shiki-dark:#96D0FF"> _ZN5osdev2io4uart7CHARBUF17hc80dca2c0e52eba2E</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss._ZN5osdev2io4uart7CHARBUF17hc80dca2c0e52eba2E</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> $d</span><span style="color:#032F62;--shiki-dark:#96D0FF">.9</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088548</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss._ZN5osdev2io4mmio9BASE_ADDR17h4c868743b35a3ef8E</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> $d</span><span style="color:#032F62;--shiki-dark:#96D0FF">.1</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088548</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">     O</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bss._ZN5osdev2io4mmio9BASE_ADDR17h4c868743b35a3ef8E</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000008</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .hidden</span><span style="color:#032F62;--shiki-dark:#96D0FF"> _ZN5osdev2io4mmio9BASE_ADDR17h4c868743b35a3ef8E</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .rodata</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_start</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">       *</span><span style="color:#032F62;--shiki-dark:#96D0FF">ABS</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_size</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_end</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bss</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __end</span></span></code></pre></div>
+<p>The fourth column is the section name. These <code>.bss.xxx</code> should be coming from
+the object file. They are expected to be under the same section <code>.bss</code> based on
+my script, as seen on the symbol <code>bss</code>.</p>
+<p>The compiler produces sections with the name <code>.bss.*MANGLED_NAME*</code>, and my
+linker script only includes a section with the name <code>*(.bss)</code>.</p>
+<h2 id="fixing">Fixing<a class="heading-anchor" aria-label="Link to section" href="#fixing">#</a></h2>
+<p>Well, the fix is simple, put a wildcard on it.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">/*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">.bss</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">--</span><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> *</span><span style="color:#24292E;--shiki-dark:#ADBAC7">(</span><span style="color:#6F42C1;--shiki-dark:#F69D50">.bss*</span><span style="color:#24292E;--shiki-dark:#ADBAC7">) </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#032F62;--shiki-dark:#96D0FF">/</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">.bss</span><span style="color:#032F62;--shiki-dark:#96D0FF"> :</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">{</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    bss</span><span style="color:#032F62;--shiki-dark:#96D0FF"> =</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .</span><span style="color:#24292E;--shiki-dark:#ADBAC7">;</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">    *(.bss*</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#24292E;--shiki-dark:#ADBAC7">}</span></span></code></pre></div>
+<p>Rebuild.</p>
+<h3 id="the-catch">The catch<a class="heading-anchor" aria-label="Link to section" href="#the-catch">#</a></h3>
+<p>There’s one catch. It could be depending on how you build the project, though.
+This linker script is technically not part of the cargo project. Cargo will
+watch for any changes happening in the linker script file. If you rebuild the
+project. It’ll detect as “no changes”, and proceeds to do nothing.</p>
+<p>There should be a way to prevent this, but in my case, cleaning the build output
+before rebuilding works well. The linker script should be very rarely touched.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#D73A49;--shiki-dark:#F47067">></span><span style="color:#24292E;--shiki-dark:#ADBAC7"> cargo clean</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">     Removed</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> 78</span><span style="color:#032F62;--shiki-dark:#96D0FF"> files,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> 4.9MiB</span><span style="color:#032F62;--shiki-dark:#96D0FF"> total</span></span></code></pre></div>
+<h3 id="result">Result<a class="heading-anchor" aria-label="Link to section" href="#result">#</a></h3>
+<p>After rebuilding, the symbols should look OK.</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">objdump</span><span style="color:#005CC5;--shiki-dark:#6CB6FF"> -dt</span><span style="color:#032F62;--shiki-dark:#96D0FF"> target/aarch64-unknown-none/debug/osdev</span><span style="color:#D73A49;--shiki-dark:#F47067"> |</span><span style="color:#6F42C1;--shiki-dark:#F69D50"> grep</span><span style="color:#032F62;--shiki-dark:#96D0FF"> ".bss"</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">     O</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000108</span><span style="color:#032F62;--shiki-dark:#96D0FF"> _ZN5osdev2io4uart7CHARBUF17ha44dc8a2b90c415dE</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> $d</span><span style="color:#032F62;--shiki-dark:#96D0FF">.9</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088108</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> $d</span><span style="color:#032F62;--shiki-dark:#96D0FF">.1</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088108</span><span style="color:#032F62;--shiki-dark:#96D0FF"> l</span><span style="color:#032F62;--shiki-dark:#96D0FF">     O</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000008</span><span style="color:#032F62;--shiki-dark:#96D0FF"> .hidden</span><span style="color:#032F62;--shiki-dark:#96D0FF"> _ZN5osdev2io4mmio9BASE_ADDR17h4c868743b35a3ef8E</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .rodata</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_start</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000001000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">       *</span><span style="color:#032F62;--shiki-dark:#96D0FF">ABS</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">*</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_size</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000089000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __bss_end</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000088000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> bss</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">0000000000089000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> g</span><span style="color:#032F62;--shiki-dark:#96D0FF">       .bss</span><span style="color:#005CC5;--shiki-dark:#6CB6FF">	0000000000000000</span><span style="color:#032F62;--shiki-dark:#96D0FF"> __end</span></span></code></pre></div>
+<p>Now, symbols are properly inside <code>.bss</code> section and <code>__bss_size</code> is non-zero.</p>
+<p>And my UART test works well now!</p>
+<div class="code-block" data-code-block="" data-language="shell"><div class="code-block-header"><span class="code-lang">shell</span><button type="button" class="code-copy-btn" data-code-copy="" aria-label="Copy shell code">Copy</button></div><pre class="astro-code astro-code-themes github-light github-dark-dimmed" style="background-color:#fff;--shiki-dark-bg:#22272e;color:#24292e;--shiki-dark:#adbac7; overflow-x: auto;" tabindex="0" data-language="shell"><code><span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">UART</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Test</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Hello,</span><span style="color:#032F62;--shiki-dark:#96D0FF"> kernel</span><span style="color:#032F62;--shiki-dark:#96D0FF"> World</span><span style="color:#032F62;--shiki-dark:#96D0FF"> from</span><span style="color:#032F62;--shiki-dark:#96D0FF"> Rust!</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">Decimal</span><span style="color:#032F62;--shiki-dark:#96D0FF"> number</span><span style="color:#032F62;--shiki-dark:#96D0FF"> print</span><span style="color:#032F62;--shiki-dark:#96D0FF"> test</span><span style="color:#24292E;--shiki-dark:#ADBAC7"> (expected: </span><span style="color:#005CC5;--shiki-dark:#6CB6FF">1234567890</span><span style="color:#24292E;--shiki-dark:#ADBAC7">)</span></span>
+<span class="line"><span style="color:#6F42C1;--shiki-dark:#F69D50">1234567890</span></span></code></pre></div>
+<h2 id="lessons-learned">Lessons learned<a class="heading-anchor" aria-label="Link to section" href="#lessons-learned">#</a></h2>
+<p>Well, if not because of the small scale of the project, I wouldn’t have dived
+this deep to figure out this undefined behavior error. After figuring this out,
+It seems less intimidating using these tools for binary analysis. It provided a
+quite clear information on what’s happening, as long as you know the columns,
+though.</p>
+<p>Zero initializing this <code>.bss</code> section is important to make sure your global
+variable is in a consistent state when you run the program. It seems that for
+common OSes, this <a href="https://stackoverflow.com/questions/11424980/why-bss-explicitly-initialize-global-variable-to-zero">section is zero-ed out for
+you</a>.</p>
+<p>Rust has multiple safety mechanisms unseen in C, runtime bounds checking is one
+of them. Although I think there are dividing opinions whether these bound
+checks are good for performance. I believe that our CPU’s branch prediction
+already made the perf impact negligible. I haven’t done any comparison, but it’s
+a welcomed feature.</p>
+<p>You also need to be careful when handling project files that are not native to
+the cargo system. It should be fixable by some configuration, so perhaps this is
+just my Rust skill issue.</p>
+<h3 id="question-left-to-be-answered">Question left to be answered<a class="heading-anchor" aria-label="Link to section" href="#question-left-to-be-answered">#</a></h3>
+<p>I mentioned before that I explicitly put an initialized value on my <code>pub const fn new()</code>. Technically if it’s included in the binary, then the memory segment
+would be replaced into zeroes, effectively doing the <code>.bss</code> zero-ing. My guess
+that these “zero-es” got truncated by an optimization pass somewhere in the
+linker/<code>objcopy</code> stage, but I haven’t  got the time to prove it. On the bright
+side, I get to uncover this bug.</p>
+<p>Well, time to go back to work.</p> </div> </article> <aside class="post-sidebar" data-astro-cid-yvbahnfj> <nav class="toc" aria-label="Table of contents" data-toc data-astro-cid-xvrfupwn><p class="toc-title" data-astro-cid-xvrfupwn>On this page</p><ul data-astro-cid-xvrfupwn><li class="depth-2" data-astro-cid-xvrfupwn><a href="#background" data-toc-link="background" data-astro-cid-xvrfupwn>Background</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#printing-an-integer" data-toc-link="printing-an-integer" data-astro-cid-xvrfupwn>Printing an integer</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-stack" data-toc-link="the-stack" data-astro-cid-xvrfupwn>The Stack</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#the-problem" data-toc-link="the-problem" data-astro-cid-xvrfupwn>The problem</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#working-on-my-panic-handler" data-toc-link="working-on-my-panic-handler" data-astro-cid-xvrfupwn>Working on my Panic handler</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#root-causing" data-toc-link="root-causing" data-astro-cid-xvrfupwn>Root causing</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#fixing" data-toc-link="fixing" data-astro-cid-xvrfupwn>Fixing</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#the-catch" data-toc-link="the-catch" data-astro-cid-xvrfupwn>The catch</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#result" data-toc-link="result" data-astro-cid-xvrfupwn>Result</a></li><li class="depth-2" data-astro-cid-xvrfupwn><a href="#lessons-learned" data-toc-link="lessons-learned" data-astro-cid-xvrfupwn>Lessons learned</a></li><li class="depth-3" data-astro-cid-xvrfupwn><a href="#question-left-to-be-answered" data-toc-link="question-left-to-be-answered" data-astro-cid-xvrfupwn>Question left to be answered</a></li></ul></nav><script>
+  (function () {
+    const links = Array.from(document.querySelectorAll('[data-toc-link]'));
+    if (links.length === 0) {
+      return;
+    }
+    const targets = links
+      .map((link) => document.getElementById(link.getAttribute('data-toc-link') || ''))
+      .filter(Boolean);
+
+    function setActive(id) {
+      links.forEach((link) => {
+        const active = link.getAttribute('data-toc-link') === id;
+        link.classList.toggle('active', active);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(entry.target.id);
+            break;
+          }
+        }
+      },
+      { rootMargin: '-80px 0px -70% 0px', threshold: 0 },
+    );
+
+    targets.forEach((el) => observer.observe(el));
+  })();
+</script> </aside> </div>  </main> <footer class="site-footer" data-astro-cid-mrconu7a> <div class="site-shell footer-inner" data-astro-cid-mrconu7a> <div class="footer-links" data-astro-cid-mrconu7a> <a href="https://github.com/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>GitHub</a> <a href="https://linkedin.com/in/firmanhp" target="_blank" rel="noopener noreferrer" data-astro-cid-mrconu7a>LinkedIn</a> <a href="/blog/rss.xml" data-astro-cid-mrconu7a>RSS</a> </div> </div> </footer>  </body></html> <script>
+  (function () {
+    document.querySelectorAll('[data-code-copy]').forEach((button) => {
+      if (button.dataset.bound === 'true') {
+        return;
+      }
+      button.dataset.bound = 'true';
+      button.addEventListener('click', async () => {
+        const block = button.closest('[data-code-block]');
+        const code = block ? block.querySelector('pre code') : null;
+        if (!code) {
+          return;
+        }
+        const text = code.textContent || '';
+        let copied = false;
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(text);
+            copied = true;
+          } catch (_err) {}
+        }
+        if (!copied) {
+          const area = document.createElement('textarea');
+          area.value = text;
+          area.setAttribute('readonly', '');
+          area.style.position = 'fixed';
+          area.style.opacity = '0';
+          document.body.appendChild(area);
+          area.select();
+          try {
+            copied = document.execCommand('copy');
+          } catch (_err) {}
+          document.body.removeChild(area);
+        }
+        button.textContent = copied ? 'Copied' : 'Failed';
+        if (copied) {
+          setTimeout(() => {
+            button.textContent = 'Copy';
+          }, 1500);
+        }
+      });
+    });
+  })();
+</script> 
